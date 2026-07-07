@@ -13,7 +13,7 @@ update this pin, run the test suite.
 
 ### cwo_core modules (10)
 
-- scripts/cwo_core/__init__.py
+- scripts/cwo_core/__init__.py (adapted: __all__ trimmed to vendored modules)
 - scripts/cwo_core/coach.py
 - scripts/cwo_core/paths.py (adapted: repo-root check drops schemas/ requirement)
 - scripts/cwo_core/policy.py
