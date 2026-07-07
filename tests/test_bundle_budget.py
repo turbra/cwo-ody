@@ -32,12 +32,12 @@ ACCEPTANCE_PROMPT = (
 INDEX_TRIGGER_CONTRACT_TERMS = (
     "Use complex-work-orchestration:",
     "migration of our two internal services to the new auth system",
-    "No direct CWO tool is expected",
-    "use bash/shell",
+    "Use bash/shell",
     "not pipeline/chat_with_model/web_search/manage_endpoints/update_plan",
-    "Find scripts/cwo_doctor.py",
-    "run python3 scripts/cwo_doctor.py --json yourself",
-    "Never ask the user to run scripts",
+    "Never tell the user steps",
+    "Run scripts/cwo_doctor.py --json yourself",
+    "doctor is bootstrap, not plan",
+    "Then run scripts/coach_prompt.py --json <goal>",
     "If no bash/shell, STOP",
 )
 

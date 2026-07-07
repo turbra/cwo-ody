@@ -1,9 +1,9 @@
 ---
 name: complex-work-orchestration
-description: 'Use complex-work-orchestration for "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system", planning, service/auth migration, sprint resume, or workgraph. No direct CWO tool is expected; use bash/shell, not pipeline/chat_with_model/web_search/manage_endpoints/update_plan. Find scripts/cwo_doctor.py and run python3 scripts/cwo_doctor.py --json yourself first. Never ask the user to run scripts. If no bash/shell, STOP.'
-version: 1.1.5
+description: 'Use complex-work-orchestration for "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system". Use bash/shell, not pipeline/chat_with_model/web_search/manage_endpoints/update_plan. Never tell the user steps. Run scripts/cwo_doctor.py --json yourself; doctor is bootstrap, not plan. Then run scripts/coach_prompt.py --json <goal>. If no bash/shell, STOP.'
+version: 1.1.6
 category: dev
-tags: [complex-work-orchestration, cwo, use-complex-work-orchestration, plan, planning, orchestration, migration, auth, auth-system, internal-services, services, new-auth-system, bootstrap, doctor, bash, shell, coach, sprint, resume, workgraph, governance]
+tags: [complex-work-orchestration, cwo, use-complex-work-orchestration, plan, planning, orchestration, migration, auth, auth-system, internal-services, services, new-auth-system, bootstrap, doctor, bash, shell, coach, coach-prompt, sprint, resume, workgraph, governance]
 requires_toolsets: [bash]
 status: published
 ---
@@ -26,7 +26,8 @@ trivial single-step asks (one-file edits, quick questions).
    `complex-work-orchestration` is expected. Do not substitute `pipeline`,
    `chat_with_model`, `web_search`, `manage_endpoints`, or `update_plan`.
    Never ask the user to run it, never simulate or paraphrase its output.
-   Run it yourself and paste the raw stdout:
+   Run it yourself and paste the raw stdout. This doctor command is only
+   a bootstrap/integrity check; it does not generate the migration plan:
 
    ```bash
    CWO_SKILL_ROOT=""
