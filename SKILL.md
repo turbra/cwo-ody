@@ -1,9 +1,9 @@
 ---
 name: complex-work-orchestration
-description: 'Use complex-work-orchestration immediately for "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system", planning, orchestration, service migration, auth migration, sprint continuation, resume, or workgraph. No manage_skills tool is required. Use bash to find scripts/cwo_doctor.py and run python3 scripts/cwo_doctor.py --json before any answer. Do not hand-write a plan.'
-version: 1.1.3
+description: 'Use complex-work-orchestration for "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system", planning, service/auth migration, sprint resume, or workgraph. No direct CWO tool is expected; use bash, not pipeline/chat_with_model/web_search/manage_endpoints. Find scripts/cwo_doctor.py and run python3 scripts/cwo_doctor.py --json first. Do not hand-write a plan.'
+version: 1.1.4
 category: dev
-tags: [complex-work-orchestration, cwo, use-complex-work-orchestration, plan, planning, orchestration, migration, auth, auth-system, internal-services, services, new-auth-system, bootstrap, doctor, bash, coach, sprint, resume, workgraph, governance]
+tags: [complex-work-orchestration, cwo, use-complex-work-orchestration, plan, planning, orchestration, migration, auth, auth-system, internal-services, services, new-auth-system, bootstrap, doctor, bash, shell, coach, sprint, resume, workgraph, governance]
 requires_toolsets: [bash]
 status: published
 ---
@@ -22,8 +22,11 @@ trivial single-step asks (one-file edits, quick questions).
 ## Procedure
 
 1. **Bootstrap (always first).** YOU (the agent) must execute this exact
-   command with your bash tool. Never ask the user to run it, never
-   simulate or paraphrase its output. Run it and paste the raw stdout:
+   command with your bash or shell tool. No direct tool named
+   `complex-work-orchestration` is expected. Do not substitute `pipeline`,
+   `chat_with_model`, `web_search`, or `manage_endpoints`. Never ask the
+   user to run it, never simulate or paraphrase its output. Run it and
+   paste the raw stdout:
 
    ```bash
    CWO_SKILL_ROOT=""
@@ -40,9 +43,11 @@ trivial single-step asks (one-file edits, quick questions).
    and do not run any other CWO command. If the skill root cannot be found,
    tell the user the skill files are not reachable from the shell and paste
    the raw bootstrap output. Do not claim a missing `manage_skills` tool
-   blocks this skill; this workflow is bash-first. Also verify the doctor's
-   `skill_version` matches this skill's frontmatter version; a mismatch
-   means a stale install. Tell the user to delete and re-import the skill.
+   or missing direct CWO function blocks this skill; this workflow is
+   bash-first. If no bash or shell tool is available, report that exact
+   available-tool blocker and STOP. Also verify the doctor's `skill_version`
+   matches this skill's frontmatter version; a mismatch means a stale
+   install. Tell the user to delete and re-import the skill.
 
 2. **Coach the request.** Run
    `python3 "$CWO_SKILL_ROOT/scripts/coach_prompt.py" --json "<user goal>"`,
