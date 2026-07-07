@@ -18,8 +18,9 @@ several dependent workstreams. Do NOT use for trivial single-step asks
 
 ## Procedure
 
-1. **Bootstrap (always first).** Locate the installed skill root and prove
-   it is executable by running this exact bash command:
+1. **Bootstrap (always first).** YOU (the agent) must execute this exact
+   command with your bash tool. Never ask the user to run it, never
+   simulate or paraphrase its output — run it and paste the raw stdout:
 
    ```bash
    CWO_SKILL_ROOT=""
