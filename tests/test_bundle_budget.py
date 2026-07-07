@@ -66,7 +66,7 @@ class BundleBudgetTests(unittest.TestCase):
                 f"{rel}: too deep; the importer would silently drop it",
             )
             name = Path(rel).name.lower()
-            if name in {"license", "readme.md", "skill.md"}:
+            if name in {".gitignore", "license", "readme.md", "skill.md"}:
                 continue
             self.assertTrue(
                 name.endswith(ALLOWED_SUFFIXES),
