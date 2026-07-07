@@ -44,11 +44,22 @@ CLI flags today and are not surfaced in Odysseus chat.
   `view_ref`.
 - Importer limits (`services/memory/skill_importer.py`): GitHub hosts only;
   ≤ 64 files, ≤ 2 MB total, ≤ 400 KB per file; allowed suffixes include
-  `.md .py .sh .yaml .yml .json .toml`.
-- The agent has streaming `bash` and `python` subprocess tools, so bundled
-  scripts are executable in the pod.
+  `.md .py .sh .yaml .yml .json .toml`. **The directory walker silently
+  truncates**: it `break`s when the file/byte caps are hit and stops recursing
+  below directory depth 4 — it does not error. The bundle must therefore stay
+  well under the caps (target ≤ 55 files) and ≤ 3 directory levels deep, and
+  the budget test must assert the exact expected file manifest, not just
+  "under limit".
+- The agent has streaming `bash` and `python` subprocess tools. The `python`
+  tool executes isolated snippets; `bash` starts in the active workspace and
+  is not sandboxed, so **script execution keys on `bash`** (`bash` runs
+  `python3 <script>`).
 - `requires_toolsets` frontmatter hides the skill when a required toolset is
-  inactive.
+  inactive; the toolset vocabulary is the tool-section keys (verified:
+  `bash`, `python` are literal keys), so the skill declares
+  `requires_toolsets: [bash]`.
+- `get_workspace` is a built-in tool returning the absolute path of the active
+  workspace folder; file tools are confined to it and the shell starts there.
 
 ## Architecture
 
@@ -86,10 +97,24 @@ Budget estimate: ~25–30 files, well inside the 64-file/2 MB cap.
   `cwo_core.beads` at runtime (test-enforced). `scaffold_workgraph.py`
   defaults to `--format markdown-workgraph`; `continue_sprint.py` and
   `summarize_resume_state.py` operate on workgraph files only.
-- **Workspace location:** workgraph files live in a work directory inside the
-  pod. Exact path is an implementation-plan decision after verifying what the
-  importer preserves and what the subprocess tools use as cwd; the skill must
-  not depend on paths outside what Odysseus already provides.
+- **Skill-root bootstrap (execution path):** imported files land under
+  Odysseus's skill storage (`data/skills/<category>/<name>/`), while `bash`
+  starts in the agent workspace — the two are different directories. SKILL.md's
+  Procedure therefore begins with a deterministic bootstrap: one `bash`
+  command that locates the installed skill root by searching the candidate
+  data roots for a unique sentinel file (`scripts/cwo_doctor.py`), exports it
+  as `CWO_SKILL_ROOT`, and runs `python3 "$CWO_SKILL_ROOT/scripts/cwo_doctor.py"
+  --json` to prove executability (Python version, script tree intact, policy
+  readable) before any real command. If a deployment prevents direct
+  execution from skill storage, the documented contingency is materializing
+  `scripts/` into the workspace via `manage_skills view_ref` — contingency
+  only, not the primary path. The vertical-slice milestone (below) proves the
+  primary path live before more code is vendored.
+- **Workspace location (settled):** workgraph files live under
+  `<workspace>/.cwo/` where `<workspace>` is the path returned by
+  `get_workspace` — e.g. `<workspace>/.cwo/workgraph-<slug>.md`. The final
+  orchestration packet shown to the user always includes the workgraph's
+  absolute path so a fresh conversation can resume it.
 - **JSON is the machine contract.** The agent always invokes coach/route with
   `--format json` and parses output (the JSON already contains the summary
   fields that upstream's `--brief` text mode renders); text rendering is for
@@ -98,6 +123,25 @@ Budget estimate: ~25–30 files, well inside the 64-file/2 MB cap.
   `--data-sensitivity` declaration whenever the heuristic flags above public,
   and passes it explicitly. Declarations can raise, never lower (upstream
   semantics).
+
+### SKILL.md shape
+
+Odysseus's parser and skills index favor a small set of known sections. The
+SKILL.md stays tight: frontmatter, a short **When to Use**, and a **Procedure**
+of numbered steps (bootstrap → coach → surface options → map answers →
+execute → continue), each step pointing into `references/` for detail. Deep
+protocol content lives in `references/chat-protocol.md` and
+`references/workgraph-lifecycle.md`; no reliance on arbitrary CWO-style
+headings being surfaced in the index.
+
+### Answer-to-flag mapping (deterministic)
+
+`references/chat-protocol.md` contains a mapping table — one row per coach
+question: question id, what the agent asks in chat, default, accepted
+plain-language answers, the exact flag/JSON field each answer maps to, and the
+re-run command. The agent must use this table rather than inventing mappings;
+anything not in the table is answered with the default plus a note to the
+user.
 
 ## Chat interaction flow
 
@@ -135,12 +179,26 @@ Budget estimate: ~25–30 files, well inside the 64-file/2 MB cap.
 
 - Vendored unittest subset (path-adjusted): coach/route JSON contract tests,
   workgraph scaffold/parse round-trip, continue-sprint ranking/blockers.
-- New `tests/test_bundle_budget.py`: ≤ 64 files, ≤ 2 MB total, ≤ 400 KB per
-  file, only importer-allowed suffixes — the importability constraint is
-  enforced, not remembered.
+- New `tests/test_bundle_budget.py`: asserts the **exact expected file
+  manifest** (tracked files == a checked-in manifest list), ≤ 55 files
+  (margin under the 64 cap), ≤ 2 MB total, ≤ 400 KB per file, ≤ 3 directory
+  levels deep, only importer-allowed suffixes — because the importer truncates
+  silently, "under limit" alone is not enough.
 - New test: no vendored module imports `cwo_core.beads` at runtime.
+- New `scripts/cwo_doctor.py` self-check used by the bootstrap; unit-tested
+  (reports python version, tree integrity, policy readability as JSON).
 - GitHub Actions: `python3 -m compileall .` + `python3 -m unittest discover`
   on ubuntu-latest. Stdlib-only, matching both upstream's rule and the pod.
+
+## Build order: vertical slice first
+
+Milestone 0 (before vendoring the full script set): SKILL.md +
+`scripts/cwo_doctor.py` + one reference + the bundle-budget/manifest test.
+Import that into the live Odysseus deployment and prove in chat that the agent
+can locate the skill root and execute the doctor script from wherever the
+importer stores files. This resolves the execution-path unknown — the design's
+biggest risk — before more CWO code is copied. Milestone 1 vendors the core
+loop; milestone 2 adds continuation/resume polish.
 
 ## Out of scope (v1)
 
@@ -158,4 +216,7 @@ Odysseus itself.
    in the pod.
 4. "Continue the sprint" in a fresh conversation produces a correct next-issue
    brief from that workgraph.
-5. CI green; bundle-budget test enforces importability.
+5. CI green; bundle-budget/manifest test enforces importability.
+6. Live smoke test on the deployed Odysseus: after web-UI import, the chat
+   agent locates and executes `cwo_doctor.py` successfully (milestone 0 gate,
+   re-verified at v1).
