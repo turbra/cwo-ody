@@ -1,7 +1,7 @@
 ---
 name: complex-work-orchestration
 description: Govern complex multi-step work — coach the request, route it, scaffold a Markdown workgraph, execute with evidence, and resume across conversations.
-version: 0.1.0
+version: 1.0.0
 category: dev
 tags: [orchestration, planning, workgraph, governance]
 requires_toolsets: [bash]
@@ -38,4 +38,28 @@ several dependent workstreams. Do NOT use for trivial single-step asks
    read the reference `upstream-pin.md` via manage_skills view_ref and tell
    the user the skill files are not reachable from the shell.
 
-2. Later milestones add the coach/route/workgraph procedure here.
+2. **Coach the request.** Run
+   `python3 "$CWO_SKILL_ROOT/scripts/coach_prompt.py" --json "<user goal>"`,
+   then follow the reference `chat-protocol.md` (manage_skills view_ref
+   path=references/chat-protocol.md): post ONE message with the
+   recommendation summary and the numbered open questions, defaults marked.
+
+3. **Map answers deterministically** using the answer-to-flag table in
+   chat-protocol.md. Unknown answers → default + tell the user. Re-run the
+   coach with mapped flags and show the final packet for confirmation.
+
+4. **Scaffold and persist.** Follow `workgraph-lifecycle.md`: scaffold with
+   `--dry-run --format markdown-workgraph`, save to
+   `<workspace>/.cwo/workgraph-<slug>.md` (get the workspace path from the
+   get_workspace tool), and always tell the user the absolute path.
+
+5. **Execute with evidence.** Work items in dependency order; update each
+   item's Status field and append evidence lines as you close it.
+
+6. **Resume / continue.** On "continue the sprint": run summarize_resume_state
+   and continue_sprint against the workgraph file (commands in
+   workgraph-lifecycle.md) and relay the recommended-next brief.
+
+7. **Failures.** Relay script stderr verbatim; never fabricate results.
+   If effective data sensitivity is restricted, keep content away from
+   external model APIs and say why.

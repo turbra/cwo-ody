@@ -13,8 +13,13 @@ In the Odysseus web UI: Skills → Import from URL → paste
 
 ## Verify after import
 
-Ask the Odysseus agent to "run the CWO doctor check". It should locate the
-skill root and print a JSON result with `"ok": true`.
+Switch to **AGENT mode** (chat mode fabricates results) and enable bash.
+Ask: "plan a two-service refactor". The agent locates the imported skill
+at `/app/data/skills/imported/cwo-ody/`, bootstraps via `cwo_doctor.py`,
+coaches your goal, asks numbered questions, and saves the workgraph as
+`~/.cwo/workgraph-<slug>.md`. In a fresh conversation, ask "continue the
+sprint" — the agent resumes from the workgraph. Return the doctor JSON with
+`"ok": true` if the skill root is inaccessible.
 
 ## State model
 

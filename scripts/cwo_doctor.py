@@ -22,7 +22,16 @@ DOCTOR_RESULT_TYPE = "cwo-odysseus-doctor"
 REQUIRED_FILES = [
     "SKILL.md",
     "bundle-manifest.txt",
+    "policy/routing-policy.yaml",
+    "references/chat-protocol.md",
+    "references/workgraph-lifecycle.md",
+    "scripts/coach_prompt.py",
+    "scripts/continue_sprint.py",
+    "scripts/cwo_core/routing.py",
     "scripts/cwo_doctor.py",
+    "scripts/route_work.py",
+    "scripts/scaffold_workgraph.py",
+    "scripts/summarize_resume_state.py",
 ]
 
 

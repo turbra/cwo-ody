@@ -35,6 +35,26 @@ class CwoDoctorTests(unittest.TestCase):
             self.assertFalse(result["ok"])
             self.assertIn("SKILL.md", result["missing_files"])
 
+    def test_required_files_cover_core_loop(self) -> None:
+        from pathlib import Path
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("cwo_doctor", DOCTOR)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        required = set(mod.REQUIRED_FILES)
+        for rel in [
+            "scripts/coach_prompt.py",
+            "scripts/route_work.py",
+            "scripts/scaffold_workgraph.py",
+            "scripts/summarize_resume_state.py",
+            "scripts/continue_sprint.py",
+            "scripts/cwo_core/routing.py",
+            "policy/routing-policy.yaml",
+            "references/chat-protocol.md",
+            "references/workgraph-lifecycle.md",
+        ]:
+            self.assertIn(rel, required)
+
 
 if __name__ == "__main__":
     unittest.main()
