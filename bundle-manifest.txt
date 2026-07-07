@@ -17,6 +17,7 @@ policy/zero-trust-consensus-policy.yaml
 README.md
 references/upstream-pin.md
 scripts/coach_prompt.py
+scripts/continue_sprint.py
 scripts/cwo_core/coach.py
 scripts/cwo_core/__init__.py
 scripts/cwo_core/paths.py
@@ -33,6 +34,7 @@ scripts/scaffold_workgraph.py
 scripts/summarize_resume_state.py
 SKILL.md
 tests/test_bundle_budget.py
+tests/test_continue_sprint.py
 tests/test_cwo_doctor.py
 tests/test_no_beads_import.py
 tests/test_prompt_coach.py

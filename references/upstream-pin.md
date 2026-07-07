@@ -24,9 +24,10 @@ update this pin, run the test suite.
 - scripts/cwo_core/waivers.py
 - scripts/cwo_core/workgraph_markdown.py
 
-### Orchestration scripts (4)
+### Orchestration scripts (5)
 
 - scripts/coach_prompt.py
+- scripts/continue_sprint.py (adapted: markdown-only; beads loader removed)
 - scripts/route_work.py
 - scripts/scaffold_workgraph.py (adapted: beads import/exec removed, markdown-workgraph default)
 - scripts/summarize_resume_state.py (adapted: bd path removed; --markdown-workgraph required)
@@ -44,8 +45,9 @@ update this pin, run the test suite.
 - policy/synthesis-policy.yaml
 - policy/zero-trust-consensus-policy.yaml
 
-### Tests (3, pruned: see docstring)
+### Tests (4, pruned: see docstring)
 
+- tests/test_continue_sprint.py (pruned: see docstring)
 - tests/test_prompt_coach.py
 - tests/test_route_work.py
 - tests/test_summarize_resume_state.py (no methods pruned; all markdown-workgraph tests retained)
