@@ -38,9 +38,9 @@ REPLY_MAPPING = {
     },
     "data_sensitivity": ["public", "redacted", "internal", "restricted"],
     "parallelism": {
+        "heavy-review-subagents": ["heavy subagent", "heavy subagents"],
         "no-subagents": ["no subagent", "no subagents", "main thread"],
         "review-subagents": ["subagent"],
-        "heavy-review-subagents": ["heavy subagent", "heavy subagents"],
     },
 }
 
@@ -114,11 +114,11 @@ def map_reply(reply: str, questions: list) -> tuple[dict, list[str]]:
         used_defaults.append("scaffold_size")
 
     # Extract model_synthesis (synthesis without "no synthesis")
-    if "synthesis" in reply_lower and "no synthesis" not in reply_lower:
+    if re.search(r"\bsynthesis\b", reply_lower) and not re.search(r"\bno synthesis\b", reply_lower):
         flags["model_synthesis"] = True
     else:
         flags["model_synthesis"] = False
-        if "synthesis" not in reply_lower:
+        if not re.search(r"\bsynthesis\b", reply_lower):
             used_defaults.append("model_synthesis")
 
     # Extract data_sensitivity

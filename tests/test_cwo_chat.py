@@ -200,6 +200,66 @@ class CwoChatTests(unittest.TestCase):
         # Should not contain a traceback
         self.assertNotIn("Traceback", proc.stderr)
 
+    def test_answer_maps_heavy_subagents_precedence(self) -> None:
+        """Test that heavy subagents matches before generic subagent pattern."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # First, run start
+            proc = run_cwo_chat(
+                "start",
+                "scale the system",
+                "--workspace", tmpdir
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            # Get session path
+            session_files = list((Path(tmpdir) / ".cwo").glob("session-*.json"))
+            self.assertEqual(len(session_files), 1)
+            session_path = str(session_files[0].resolve())
+
+            # Run answer with "heavy subagents please"
+            proc = run_cwo_chat(
+                "answer",
+                "heavy subagents please",
+                "--session", session_path
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            # Check session JSON for parallelism directive
+            with open(session_path) as f:
+                session = json.load(f)
+            self.assertEqual(session.get("parallelism"), "heavy-review-subagents",
+                           "heavy subagents should map to 'heavy-review-subagents'")
+
+    def test_answer_maps_no_subagents(self) -> None:
+        """Test that no subagents maps correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # First, run start
+            proc = run_cwo_chat(
+                "start",
+                "run in main thread",
+                "--workspace", tmpdir
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            # Get session path
+            session_files = list((Path(tmpdir) / ".cwo").glob("session-*.json"))
+            self.assertEqual(len(session_files), 1)
+            session_path = str(session_files[0].resolve())
+
+            # Run answer with "no subagents"
+            proc = run_cwo_chat(
+                "answer",
+                "no subagents",
+                "--session", session_path
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            # Check session JSON for parallelism directive
+            with open(session_path) as f:
+                session = json.load(f)
+            self.assertEqual(session.get("parallelism"), "no-subagents",
+                           "no subagents should map to 'no-subagents'")
+
 
 if __name__ == "__main__":
     unittest.main()
