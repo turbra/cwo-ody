@@ -1,8 +1,11 @@
 # bundle-manifest.txt — every git-tracked file, one per line, sorted.
 # tests/test_bundle_budget.py asserts exact equality with `git ls-files`.
+README.md
+SKILL.md
 bundle-manifest.txt
 docs/superpowers/plans/2026-07-07-cwo-odysseus-skill.md
 docs/superpowers/specs/2026-07-07-cwo-odysseus-skill-design.md
+references/upstream-pin.md
 scripts/cwo_doctor.py
 tests/test_bundle_budget.py
 tests/test_cwo_doctor.py
