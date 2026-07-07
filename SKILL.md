@@ -1,9 +1,9 @@
 ---
 name: complex-work-orchestration
-description: 'Use complex-work-orchestration for "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system". Use bash/shell, not pipeline/chat_with_model/web_search/manage_endpoints/update_plan. Never tell the user steps. Run scripts/cwo_doctor.py --json yourself; doctor is bootstrap, not plan. Then run scripts/coach_prompt.py --json <goal>. No bash/shell = CWO_BLOCKED_NO_SHELL; no alternatives.'
+description: Govern complex multi-step work — coach the request, route it, scaffold a Markdown workgraph, execute with evidence, and resume across conversations.
 version: 1.1.7
 category: dev
-tags: [complex-work-orchestration, cwo, use-complex-work-orchestration, plan, planning, orchestration, migration, auth, auth-system, internal-services, services, new-auth-system, bootstrap, doctor, bash, shell, coach, coach-prompt, sprint, resume, workgraph, governance]
+tags: [orchestration, planning, workgraph, governance]
 requires_toolsets: [bash]
 status: published
 ---
@@ -13,11 +13,10 @@ status: published
 ALWAYS use this skill immediately, before answering in your own words, when
 the user names it ("use complex-work-orchestration", "CWO"); asks to plan,
 orchestrate, migrate, or break down multi-step engineering or research work;
-or says "continue the sprint" / "resume the workgraph". If the prompt starts
-with "Use complex-work-orchestration:", the first visible action must be
-Procedure step 1's bootstrap. Do NOT gather requirements or draft a plan
-yourself first. Procedure step 2's coach does that. Only skip this skill for
-trivial single-step asks (one-file edits, quick questions).
+or says "continue the sprint" / "resume the workgraph". Do NOT gather
+requirements or draft a plan yourself first. Procedure step 2's coach does
+that. Only skip this skill for trivial single-step asks (one-file edits,
+quick questions).
 
 ## Procedure
 
