@@ -3,6 +3,7 @@
 README.md
 SKILL.md
 bundle-manifest.txt
+.github/workflows/ci.yml
 docs/superpowers/plans/2026-07-07-cwo-odysseus-skill.md
 docs/superpowers/specs/2026-07-07-cwo-odysseus-skill-design.md
 references/upstream-pin.md
