@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 DOCTOR_RESULT_TYPE = "cwo-odysseus-doctor"
-SKILL_VERSION = "1.1.7"
+SKILL_VERSION = "1.2.0"
 
 # Extended by later milestones; keep sorted. SKILL.md is listed because a
 # truncated import (Odysseus drops files silently at its caps) is the main
@@ -27,6 +27,7 @@ REQUIRED_FILES = [
     "references/chat-protocol.md",
     "references/workgraph-lifecycle.md",
     "scripts/coach_prompt.py",
+    "scripts/cwo_chat.py",
     "scripts/continue_sprint.py",
     "scripts/cwo_core/__init__.py",
     "scripts/cwo_core/coach.py",

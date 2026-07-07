@@ -1,5 +1,9 @@
 # Chat protocol: surfacing CWO options in Odysseus
 
+> **v1.2.0:** `scripts/cwo_chat.py` implements this protocol in code — the
+> agent runs one command per turn and relays output. This document remains
+> the human-readable specification of the mapping the script applies.
+
 ## Trust boundary (read first)
 
 These scripts verify the scripted path only. Nothing here can physically

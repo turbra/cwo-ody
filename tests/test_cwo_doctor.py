@@ -45,6 +45,7 @@ class CwoDoctorTests(unittest.TestCase):
         required = set(mod.REQUIRED_FILES)
         for rel in [
             "scripts/coach_prompt.py",
+            "scripts/cwo_chat.py",
             "scripts/route_work.py",
             "scripts/scaffold_workgraph.py",
             "scripts/summarize_resume_state.py",
