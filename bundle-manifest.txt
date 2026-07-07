@@ -1,6 +1,5 @@
 # bundle-manifest.txt — every git-tracked file, one per line, sorted.
 # tests/test_bundle_budget.py asserts exact equality with `git ls-files`.
-.gitignore
 bundle-manifest.txt
 docs/superpowers/plans/2026-07-07-cwo-odysseus-skill.md
 docs/superpowers/specs/2026-07-07-cwo-odysseus-skill-design.md
