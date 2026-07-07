@@ -13,7 +13,7 @@ hard guarantee.
 2. Parse JSON. Post ONE chat message containing:
    - summary line: recommended orchestration level, route class, risk,
      data sensitivity (fields: `recommended_orchestration_level`,
-     `route.route`, `route.risk`, `route.data_sensitivity`)
+     `route.route`, `route.risk_level`, `route.data_sensitivity`)
    - each entry of `interactive_questions` as a numbered question with its
      options; mark the option whose label contains "(Recommended)" as the
      default
@@ -28,7 +28,7 @@ hard guarantee.
 
 | question id | asked as | default | accepted answers → flag/value |
 |---|---|---|---|
-| `workerbee_parallelism` | "Parallelize with subagents?" | `review-subagents` | "review"/"default" → record `review-subagents`; "heavy" → `heavy-review-subagents`; "no"/"none"/"main thread" → `no-subagents`. No CLI flag — record the value in the final packet message; it directs how YOU execute (whether you fan out work). |
+| `workerbee_parallelism` | "Parallelize with subagents?" | coach's recommended option (label contains "(Recommended)") | "review"/"default" → record `review-subagents`; "heavy" → `heavy-review-subagents`; "no"/"none"/"main thread" → `no-subagents`. No CLI flag — record the value in the final packet message; it directs how YOU execute (whether you fan out work). |
 | `beads_context_depth` | "How much prior context should workers read?" | coach's `beads_context_depth` value | "none"/"summary"/"focused"/"heavy"/"audit" → `--beads-context-depth <value>` |
 | `model_synthesis` (appears in `enabled_levers`/questions when relevant) | "Activate the model-synthesis lane?" | off | "yes"/"synthesis" → `--model-synthesis`; "no" → omit |
 | `scaffold_size` | "Full graph or tight chain?" | `full` | "full" → `--scaffold-size full`; "tight"/"small" → `--scaffold-size tight` |
