@@ -20,6 +20,7 @@ references/upstream-pin.md
 references/workgraph-lifecycle.md
 scripts/coach_prompt.py
 scripts/continue_sprint.py
+scripts/cwo_chat.py
 scripts/cwo_core/coach.py
 scripts/cwo_core/__init__.py
 scripts/cwo_core/paths.py
@@ -38,6 +39,7 @@ SKILL.md
 templates/markdown-workgraph.md
 tests/test_bundle_budget.py
 tests/test_continue_sprint.py
+tests/test_cwo_chat.py
 tests/test_cwo_doctor.py
 tests/test_no_beads_import.py
 tests/test_prompt_coach.py
