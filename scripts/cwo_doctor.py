@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 DOCTOR_RESULT_TYPE = "cwo-odysseus-doctor"
-SKILL_VERSION = "1.1.4"
+SKILL_VERSION = "1.1.5"
 
 # Extended by later milestones; keep sorted. SKILL.md is listed because a
 # truncated import (Odysseus drops files silently at its caps) is the main

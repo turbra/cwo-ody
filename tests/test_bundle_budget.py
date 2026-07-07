@@ -33,11 +33,12 @@ INDEX_TRIGGER_CONTRACT_TERMS = (
     "Use complex-work-orchestration:",
     "migration of our two internal services to the new auth system",
     "No direct CWO tool is expected",
-    "use bash",
-    "not pipeline/chat_with_model/web_search/manage_endpoints",
+    "use bash/shell",
+    "not pipeline/chat_with_model/web_search/manage_endpoints/update_plan",
     "Find scripts/cwo_doctor.py",
-    "run python3 scripts/cwo_doctor.py --json",
-    "Do not hand-write a plan",
+    "run python3 scripts/cwo_doctor.py --json yourself",
+    "Never ask the user to run scripts",
+    "If no bash/shell, STOP",
 )
 
 
