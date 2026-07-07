@@ -38,7 +38,8 @@ INDEX_TRIGGER_CONTRACT_TERMS = (
     "Run scripts/cwo_doctor.py --json yourself",
     "doctor is bootstrap, not plan",
     "Then run scripts/coach_prompt.py --json <goal>",
-    "If no bash/shell, STOP",
+    "No bash/shell = CWO_BLOCKED_NO_SHELL",
+    "no alternatives",
 )
 
 

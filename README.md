@@ -13,7 +13,7 @@ In the Odysseus web UI: Skills → Import from URL → paste
 
 ## Verify after import
 
-Confirm the imported skill shows version `1.1.6`. Switch to **AGENT mode**
+Confirm the imported skill shows version `1.1.7`. Switch to **AGENT mode**
 (chat mode fabricates results) and enable bash. Ask:
 `Use complex-work-orchestration: plan a migration of our two internal services to the new auth system.`
 The agent locates the imported skill at `/app/data/skills/imported/cwo-ody/`,
@@ -26,9 +26,10 @@ failure output and stop instead of claiming `"ok": true`.
 This skill does not require a `manage_skills` tool or a direct CWO function.
 If Odysseus reports that no direct tool exists, tries `pipeline`, or reports
 `manage_skills` is unavailable instead of running bash, delete/re-import and
-confirm the imported version is `1.1.6`. If it asks you to run
+confirm the imported version is `1.1.7`. If it asks you to run
 `cwo_doctor.py` manually, the bash/shell tool was not actually available to
-the agent or the import is stale.
+the agent or the import is stale. If bash/shell is absent, the expected
+response is `CWO_BLOCKED_NO_SHELL` with no alternative workflow.
 
 ## State model
 

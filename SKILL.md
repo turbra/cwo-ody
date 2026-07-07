@@ -1,7 +1,7 @@
 ---
 name: complex-work-orchestration
-description: 'Use complex-work-orchestration for "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system". Use bash/shell, not pipeline/chat_with_model/web_search/manage_endpoints/update_plan. Never tell the user steps. Run scripts/cwo_doctor.py --json yourself; doctor is bootstrap, not plan. Then run scripts/coach_prompt.py --json <goal>. If no bash/shell, STOP.'
-version: 1.1.6
+description: 'Use complex-work-orchestration for "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system". Use bash/shell, not pipeline/chat_with_model/web_search/manage_endpoints/update_plan. Never tell the user steps. Run scripts/cwo_doctor.py --json yourself; doctor is bootstrap, not plan. Then run scripts/coach_prompt.py --json <goal>. No bash/shell = CWO_BLOCKED_NO_SHELL; no alternatives.'
+version: 1.1.7
 category: dev
 tags: [complex-work-orchestration, cwo, use-complex-work-orchestration, plan, planning, orchestration, migration, auth, auth-system, internal-services, services, new-auth-system, bootstrap, doctor, bash, shell, coach, coach-prompt, sprint, resume, workgraph, governance]
 requires_toolsets: [bash]
@@ -45,10 +45,12 @@ trivial single-step asks (one-file edits, quick questions).
    tell the user the skill files are not reachable from the shell and paste
    the raw bootstrap output. Do not claim a missing `manage_skills` tool
    or missing direct CWO function blocks this skill; this workflow is
-   bash-first. If no bash or shell tool is available, report that exact
-   available-tool blocker and STOP. Also verify the doctor's `skill_version`
-   matches this skill's frontmatter version; a mismatch means a stale
-   install. Tell the user to delete and re-import the skill.
+   bash-first. If no bash or shell tool is available, reply
+   `CWO_BLOCKED_NO_SHELL: no bash/shell execution tool is available for this
+   CWO skill` and STOP. Do not offer alternative workflows. Also verify the
+   doctor's `skill_version` matches this skill's frontmatter version; a
+   mismatch means a stale install. Tell the user to delete and re-import
+   the skill.
 
 2. **Coach the request.** Run
    `python3 "$CWO_SKILL_ROOT/scripts/coach_prompt.py" --json "<user goal>"`,
