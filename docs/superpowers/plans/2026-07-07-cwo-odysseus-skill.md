@@ -1117,3 +1117,36 @@ Maps 1:1 to the spec's acceptance criteria. Needs the user's instance.
 - Spec coverage: bootstrap (T2/T3/T5), silent-truncation manifest test (T1), tight SKILL.md + references (T3/T11/T12), deterministic mapping table (T11), workspace convention (T11), `requires_toolsets: [bash]` (T3), vertical slice first (T1–T5 gate), live smoke criteria (T5/T13), no-beads guarantee (T6 test + T8–T10 adaptations), sensitivity floor conduct (T11).
 - Types/names cross-checked: `CWO_SKILL_ROOT`, `REQUIRED_FILES`, `parse_markdown_workgraph`, flag names match the pin's actual argparse definitions (verified against 5416d71 during planning).
 - Known judgment calls for executors: upstream test pruning (T7/T9/T10) follows one explicit rule — delete tests exercising non-vendored surface, never weaken surviving assertions.
+
+---
+
+## Milestone 2 — v1.2.0 local-model relay (added after live-gate findings)
+
+Design basis (approved in-session): Odysseus wraps skill text as untrusted
+context, so multi-step protocol adherence cannot be demanded of local models.
+Fix at the right altitude: one relay driver script executes the protocol;
+the model runs one command per turn and pastes output.
+
+### Task 14: Revert overfit, keep legit fixes
+Revert from the 1.1.1–1.1.7 series: acceptance-prompt-stuffed description,
+tag spam, INDEX_TRIGGER_CONTRACT_TERMS/relevance-threshold test additions in
+tests/test_bundle_budget.py, README "imported/cwo-ody" path error (correct:
+imported/complex-work-orchestration). Keep: manage_skills removal,
+$CWO_SKILL_ROOT-relative reference reads, forbidden-substitute naming
+(update_plan/pipeline/chat_with_model), CWO_BLOCKED_NO_SHELL blocker,
+em-dash→ascii README edits. Restore description to the 1.0.0 one-liner and
+tags to [orchestration, planning, workgraph, governance].
+
+### Task 15: scripts/cwo_chat.py relay driver (TDD)
+Subcommands start/answer/continue; POST/NEXT-COMMAND delimited output;
+deterministic answer→flag mapping table in code; session state + workgraph
+under <workspace>/.cwo/ (workspace = --workspace or $PWD); wraps existing
+coach/route/scaffold/summarize/continue scripts as libraries or subprocesses;
+stdlib only; tests/test_cwo_chat.py covers a full scripted 3-turn session.
+
+### Task 16: Relay SKILL.md + docs + version 1.2.0
+SKILL.md Procedure collapses to relay form (~15 lines, bootstrap folded into
+cwo_chat start); doctor REQUIRED_FILES += scripts/cwo_chat.py; SKILL_VERSION
+and frontmatter → 1.2.0 (lockstep test exists); README weak-model section;
+manifest update; push; CI green. Live acceptance retest follows as Task 13
+(retry) with qwen3-30b.
