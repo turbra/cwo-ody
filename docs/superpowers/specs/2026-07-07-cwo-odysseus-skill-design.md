@@ -116,9 +116,9 @@ Budget estimate: ~25–30 files, well inside the 64-file/2 MB cap.
   orchestration packet shown to the user always includes the workgraph's
   absolute path so a fresh conversation can resume it.
 - **JSON is the machine contract.** The agent always invokes coach/route with
-  `--format json` and parses output (the JSON already contains the summary
-  fields that upstream's `--brief` text mode renders); text rendering is for
-  humans in the terminal, not for the agent.
+  `--json` (upstream's actual flag) and parses output (the JSON already
+  contains the summary fields that upstream's `--brief` text mode renders);
+  text rendering is for humans in the terminal, not for the agent.
 - **Sensitivity floor survives:** the agent asks for or infers a
   `--data-sensitivity` declaration whenever the heuristic flags above public,
   and passes it explicitly. Declarations can raise, never lower (upstream
@@ -149,7 +149,7 @@ user.
    (multi-step work, planning, sprint continuation, risk/gate questions);
    trivial single-step asks are explicitly out of scope (upstream small-task
    calibration).
-2. **Coach run** — `python3 scripts/coach_prompt.py --format json "<goal>"`.
+2. **Coach run** — `python3 scripts/coach_prompt.py --json "<goal>"`.
 3. **Surface options** — one chat message: recommendation summary (route, task
    class, risk, sensitivity) + open questions (parallelism, context depth,
    validation/publish gates) as a numbered list with defaults marked.
