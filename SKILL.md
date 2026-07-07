@@ -1,28 +1,29 @@
 ---
 name: complex-work-orchestration
-description: Govern complex multi-step work — coach the request, route it, scaffold a Markdown workgraph, execute with evidence, and resume across conversations.
-version: 1.1.0
+description: Use complex-work-orchestration (CWO) when the user explicitly asks for CWO, planning, orchestration, migration, sprint continuation, or a Markdown workgraph.
+version: 1.1.1
 category: dev
-tags: [orchestration, planning, workgraph, governance]
+tags: [complex-work-orchestration, cwo, plan, planning, orchestration, migration, auth, services, sprint, resume, workgraph, governance]
 requires_toolsets: [bash]
 status: published
 ---
 
 ## When to Use
 
-ALWAYS use this skill — immediately, before answering in your own words —
-when the user: names it ("use complex-work-orchestration", "CWO"); asks to
-plan, orchestrate, or break down multi-step engineering or research work;
-or says "continue the sprint" / "resume the workgraph". Do NOT gather
-requirements or draft a plan yourself first — Procedure step 2's coach does
-that. Only skip this skill for trivial single-step asks (one-file edits,
-quick questions).
+ALWAYS use this skill immediately, before answering in your own words, when
+the user names it ("use complex-work-orchestration", "CWO"); asks to plan,
+orchestrate, migrate, or break down multi-step engineering or research work;
+or says "continue the sprint" / "resume the workgraph". If the prompt starts
+with "Use complex-work-orchestration:", the first visible action must be
+Procedure step 1's bootstrap. Do NOT gather requirements or draft a plan
+yourself first. Procedure step 2's coach does that. Only skip this skill for
+trivial single-step asks (one-file edits, quick questions).
 
 ## Procedure
 
 1. **Bootstrap (always first).** YOU (the agent) must execute this exact
    command with your bash tool. Never ask the user to run it, never
-   simulate or paraphrase its output — run it and paste the raw stdout:
+   simulate or paraphrase its output. Run it and paste the raw stdout:
 
    ```bash
    CWO_SKILL_ROOT=""
@@ -40,7 +41,7 @@ quick questions).
    read the reference `upstream-pin.md` via manage_skills view_ref and tell
    the user the skill files are not reachable from the shell. Also verify the
    doctor's `skill_version` matches this skill's frontmatter version; a
-   mismatch means a stale install — tell the user to delete and re-import
+   mismatch means a stale install. Tell the user to delete and re-import
    the skill.
 
 2. **Coach the request.** Run
