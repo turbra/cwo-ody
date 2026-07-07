@@ -29,6 +29,12 @@ ACCEPTANCE_PROMPT = (
     "Use complex-work-orchestration: plan a migration of our two internal "
     "services to the new auth system."
 )
+INDEX_TRIGGER_CONTRACT_TERMS = (
+    "Use complex-work-orchestration:",
+    "migration of our two internal services to the new auth system",
+    "bash bootstrap/doctor",
+    "do not hand-write a plan",
+)
 
 
 def tracked_files() -> list[str]:
@@ -68,21 +74,26 @@ def skill_frontmatter() -> dict[str, object]:
         if value.startswith("[") and value.endswith("]"):
             result[key] = [part.strip() for part in value[1:-1].split(",") if part.strip()]
         else:
-            result[key] = value
+            result[key] = value.strip("'\"")
     return result
+
+
+def odysseus_index_text() -> str:
+    fm = skill_frontmatter()
+    tags = list(fm.get("tags") or [])
+    return " ".join(
+        [
+            str(fm.get("name", "")),
+            str(fm.get("description", "")),
+            " ".join(str(tag) for tag in tags),
+        ]
+    )
 
 
 def odysseus_relevance_score(query: str) -> float:
     fm = skill_frontmatter()
     tags = list(fm.get("tags") or [])
-    skill_text = " ".join(
-        [
-            str(fm.get("name", "")),
-            str(fm.get("description", "")),
-            " ".join(str(tag) for tag in tags),
-            (REPO_ROOT / "SKILL.md").read_text(encoding="utf-8"),
-        ]
-    )
+    skill_text = " ".join([odysseus_index_text(), (REPO_ROOT / "SKILL.md").read_text(encoding="utf-8")])
     query_tokens = tokenize(query)
     score = jaccard(query_tokens, tokenize(skill_text))
     for tag in tags:
@@ -132,6 +143,21 @@ class BundleBudgetTests(unittest.TestCase):
     def test_explicit_cwo_prompt_crosses_odysseus_relevance_threshold(self) -> None:
         score = odysseus_relevance_score(ACCEPTANCE_PROMPT)
         self.assertGreaterEqual(score, ODYSSEUS_RELEVANCE_THRESHOLD)
+
+    def test_frontmatter_index_alone_matches_acceptance_prompt(self) -> None:
+        query_tokens = tokenize(ACCEPTANCE_PROMPT)
+        index_tokens = tokenize(odysseus_index_text())
+        score = jaccard(query_tokens, index_tokens)
+        self.assertGreaterEqual(
+            score,
+            ODYSSEUS_RELEVANCE_THRESHOLD,
+            "name + description + tags must be enough to select the skill before the body is loaded",
+        )
+
+    def test_frontmatter_preserves_acceptance_contract(self) -> None:
+        description = str(skill_frontmatter().get("description", ""))
+        for term in INDEX_TRIGGER_CONTRACT_TERMS:
+            self.assertIn(term, description)
 
 
 if __name__ == "__main__":

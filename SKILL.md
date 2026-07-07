@@ -1,9 +1,9 @@
 ---
 name: complex-work-orchestration
-description: Use complex-work-orchestration (CWO) when the user explicitly asks for CWO, planning, orchestration, migration, sprint continuation, or a Markdown workgraph.
-version: 1.1.1
+description: 'Use complex-work-orchestration (CWO) immediately when the user explicitly says "Use complex-work-orchestration:" or asks to plan, orchestrate, migrate services, migrate auth systems, continue a sprint, resume work, or create a Markdown workgraph. Example trigger: "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system." First load this skill and run the bash bootstrap/doctor; do not hand-write a plan or planning questions first.'
+version: 1.1.2
 category: dev
-tags: [complex-work-orchestration, cwo, plan, planning, orchestration, migration, auth, services, sprint, resume, workgraph, governance]
+tags: [complex-work-orchestration, cwo, use-complex-work-orchestration, plan, planning, orchestration, migration, auth, auth-system, internal-services, services, new-auth-system, bootstrap, doctor, bash, coach, sprint, resume, workgraph, governance]
 requires_toolsets: [bash]
 status: published
 ---
