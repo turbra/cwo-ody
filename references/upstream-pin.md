@@ -24,6 +24,11 @@ update this pin, run the test suite.
 - scripts/cwo_core/waivers.py
 - scripts/cwo_core/workgraph_markdown.py
 
+### Orchestration scripts (2)
+
+- scripts/coach_prompt.py
+- scripts/route_work.py
+
 ### Policy YAML files (10)
 
 - policy/contracting-controls.yaml
@@ -36,3 +41,8 @@ update this pin, run the test suite.
 - policy/share-boundaries.yaml
 - policy/synthesis-policy.yaml
 - policy/zero-trust-consensus-policy.yaml
+
+### Tests (2, pruned: see docstring)
+
+- tests/test_prompt_coach.py
+- tests/test_route_work.py
