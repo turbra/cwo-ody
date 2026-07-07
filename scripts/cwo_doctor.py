@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 DOCTOR_RESULT_TYPE = "cwo-odysseus-doctor"
+SKILL_VERSION = "1.1.0"
 
 # Extended by later milestones; keep sorted. SKILL.md is listed because a
 # truncated import (Odysseus drops files silently at its caps) is the main
@@ -27,11 +28,21 @@ REQUIRED_FILES = [
     "references/workgraph-lifecycle.md",
     "scripts/coach_prompt.py",
     "scripts/continue_sprint.py",
+    "scripts/cwo_core/__init__.py",
+    "scripts/cwo_core/coach.py",
+    "scripts/cwo_core/policy.py",
+    "scripts/cwo_core/paths.py",
     "scripts/cwo_core/routing.py",
+    "scripts/cwo_core/routing_signals.py",
+    "scripts/cwo_core/synthesis.py",
+    "scripts/cwo_core/util.py",
+    "scripts/cwo_core/waivers.py",
+    "scripts/cwo_core/workgraph_markdown.py",
     "scripts/cwo_doctor.py",
     "scripts/route_work.py",
     "scripts/scaffold_workgraph.py",
     "scripts/summarize_resume_state.py",
+    "templates/markdown-workgraph.md",
 ]
 
 
@@ -45,6 +56,7 @@ def check(root: Path) -> dict:
         "ok": not missing and not errors,
         "python_version": platform.python_version(),
         "skill_root": str(root),
+        "skill_version": SKILL_VERSION,
         "missing_files": missing,
         "errors": errors,
     }

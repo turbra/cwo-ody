@@ -1,7 +1,7 @@
 ---
 name: complex-work-orchestration
 description: Govern complex multi-step work — coach the request, route it, scaffold a Markdown workgraph, execute with evidence, and resume across conversations.
-version: 1.0.0
+version: 1.1.0
 category: dev
 tags: [orchestration, planning, workgraph, governance]
 requires_toolsets: [bash]
@@ -10,11 +10,13 @@ status: published
 
 ## When to Use
 
-Use for multi-step engineering or research work that needs planning,
-routing, or resumption across conversations: "plan this feature",
-"orchestrate this migration", "continue the sprint", or any request with
-several dependent workstreams. Do NOT use for trivial single-step asks
-(one-file edits, quick questions) — answer those directly.
+ALWAYS use this skill — immediately, before answering in your own words —
+when the user: names it ("use complex-work-orchestration", "CWO"); asks to
+plan, orchestrate, or break down multi-step engineering or research work;
+or says "continue the sprint" / "resume the workgraph". Do NOT gather
+requirements or draft a plan yourself first — Procedure step 2's coach does
+that. Only skip this skill for trivial single-step asks (one-file edits,
+quick questions).
 
 ## Procedure
 
@@ -36,7 +38,10 @@ several dependent workstreams. Do NOT use for trivial single-step asks
    If `ok` is not `true`, STOP: report the doctor JSON to the user verbatim
    and do not run any other CWO command. If the skill root cannot be found,
    read the reference `upstream-pin.md` via manage_skills view_ref and tell
-   the user the skill files are not reachable from the shell.
+   the user the skill files are not reachable from the shell. Also verify the
+   doctor's `skill_version` matches this skill's frontmatter version; a
+   mismatch means a stale install — tell the user to delete and re-import
+   the skill.
 
 2. **Coach the request.** Run
    `python3 "$CWO_SKILL_ROOT/scripts/coach_prompt.py" --json "<user goal>"`,
@@ -62,4 +67,6 @@ several dependent workstreams. Do NOT use for trivial single-step asks
 
 7. **Failures.** Relay script stderr verbatim; never fabricate results.
    If effective data sensitivity is restricted, keep content away from
-   external model APIs and say why.
+   external model APIs and say why. Never claim a file is missing or a
+   command failed without pasting the exact command you ran and its raw
+   output as evidence.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -49,11 +50,35 @@ class CwoDoctorTests(unittest.TestCase):
             "scripts/summarize_resume_state.py",
             "scripts/continue_sprint.py",
             "scripts/cwo_core/routing.py",
+            "scripts/cwo_core/workgraph_markdown.py",
             "policy/routing-policy.yaml",
             "references/chat-protocol.md",
             "references/workgraph-lifecycle.md",
         ]:
             self.assertIn(rel, required)
+
+    def test_version_consistency(self) -> None:
+        """Verify SKILL.md frontmatter version matches doctor SKILL_VERSION."""
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("cwo_doctor", DOCTOR)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        doctor_version = mod.SKILL_VERSION
+
+        skill_md = REPO_ROOT / "SKILL.md"
+        content = skill_md.read_text()
+        # Parse frontmatter: split on ---, extract second block (between first and second ---)
+        frontmatter_match = re.search(r'^---\n(.*?)\n---', content, re.DOTALL)
+        self.assertIsNotNone(frontmatter_match, "SKILL.md frontmatter not found")
+        frontmatter = frontmatter_match.group(1)
+
+        # Extract version: line
+        version_match = re.search(r'^version:\s*(.+)$', frontmatter, re.MULTILINE)
+        self.assertIsNotNone(version_match, "version: line not found in SKILL.md frontmatter")
+        skill_md_version = version_match.group(1).strip()
+
+        self.assertEqual(skill_md_version, doctor_version,
+                        f"SKILL.md version {skill_md_version} does not match doctor SKILL_VERSION {doctor_version}")
 
 
 if __name__ == "__main__":
