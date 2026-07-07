@@ -32,8 +32,10 @@ ACCEPTANCE_PROMPT = (
 INDEX_TRIGGER_CONTRACT_TERMS = (
     "Use complex-work-orchestration:",
     "migration of our two internal services to the new auth system",
-    "bash bootstrap/doctor",
-    "do not hand-write a plan",
+    "No manage_skills tool is required",
+    "find scripts/cwo_doctor.py",
+    "run python3 scripts/cwo_doctor.py --json",
+    "Do not hand-write a plan",
 )
 
 
@@ -158,6 +160,7 @@ class BundleBudgetTests(unittest.TestCase):
         description = str(skill_frontmatter().get("description", ""))
         for term in INDEX_TRIGGER_CONTRACT_TERMS:
             self.assertIn(term, description)
+        self.assertNotIn("First load this skill", description)
 
 
 if __name__ == "__main__":

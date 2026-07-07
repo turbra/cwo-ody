@@ -1,7 +1,7 @@
 ---
 name: complex-work-orchestration
-description: 'Use complex-work-orchestration (CWO) immediately when the user explicitly says "Use complex-work-orchestration:" or asks to plan, orchestrate, migrate services, migrate auth systems, continue a sprint, resume work, or create a Markdown workgraph. Example trigger: "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system." First load this skill and run the bash bootstrap/doctor; do not hand-write a plan or planning questions first.'
-version: 1.1.2
+description: 'Use complex-work-orchestration immediately for "Use complex-work-orchestration: plan a migration of our two internal services to the new auth system", planning, orchestration, service migration, auth migration, sprint continuation, resume, or workgraph. No manage_skills tool is required. Use bash to find scripts/cwo_doctor.py and run python3 scripts/cwo_doctor.py --json before any answer. Do not hand-write a plan.'
+version: 1.1.3
 category: dev
 tags: [complex-work-orchestration, cwo, use-complex-work-orchestration, plan, planning, orchestration, migration, auth, auth-system, internal-services, services, new-auth-system, bootstrap, doctor, bash, coach, sprint, resume, workgraph, governance]
 requires_toolsets: [bash]
@@ -38,23 +38,24 @@ trivial single-step asks (one-file edits, quick questions).
 
    If `ok` is not `true`, STOP: report the doctor JSON to the user verbatim
    and do not run any other CWO command. If the skill root cannot be found,
-   read the reference `upstream-pin.md` via manage_skills view_ref and tell
-   the user the skill files are not reachable from the shell. Also verify the
-   doctor's `skill_version` matches this skill's frontmatter version; a
-   mismatch means a stale install. Tell the user to delete and re-import
-   the skill.
+   tell the user the skill files are not reachable from the shell and paste
+   the raw bootstrap output. Do not claim a missing `manage_skills` tool
+   blocks this skill; this workflow is bash-first. Also verify the doctor's
+   `skill_version` matches this skill's frontmatter version; a mismatch
+   means a stale install. Tell the user to delete and re-import the skill.
 
 2. **Coach the request.** Run
    `python3 "$CWO_SKILL_ROOT/scripts/coach_prompt.py" --json "<user goal>"`,
-   then follow the reference `chat-protocol.md` (manage_skills view_ref
-   path=references/chat-protocol.md): post ONE message with the
-   recommendation summary and the numbered open questions, defaults marked.
+   then follow `$CWO_SKILL_ROOT/references/chat-protocol.md` (read it with
+   bash if needed): post ONE message with the recommendation summary and
+   the numbered open questions, defaults marked.
 
 3. **Map answers deterministically** using the answer-to-flag table in
    chat-protocol.md. Unknown answers → default + tell the user. Re-run the
    coach with mapped flags and show the final packet for confirmation.
 
-4. **Scaffold and persist.** Follow `workgraph-lifecycle.md`: scaffold with
+4. **Scaffold and persist.** Follow
+   `$CWO_SKILL_ROOT/references/workgraph-lifecycle.md`: scaffold with
    `--dry-run --format markdown-workgraph`, save to
    `<workspace>/.cwo/workgraph-<slug>.md` (get the workspace path from the
    get_workspace tool), and always tell the user the absolute path.

@@ -13,7 +13,7 @@ In the Odysseus web UI: Skills → Import from URL → paste
 
 ## Verify after import
 
-Confirm the imported skill shows version `1.1.2`. Switch to **AGENT mode**
+Confirm the imported skill shows version `1.1.3`. Switch to **AGENT mode**
 (chat mode fabricates results) and enable bash. Ask:
 `Use complex-work-orchestration: plan a migration of our two internal services to the new auth system.`
 The agent locates the imported skill at `/app/data/skills/imported/cwo-ody/`,
@@ -22,6 +22,10 @@ and saves the workgraph as `~/.cwo/workgraph-<slug>.md`. In a fresh
 conversation, ask "continue the sprint" - the agent resumes from the
 workgraph. If the skill root is inaccessible, the agent must report the
 failure output and stop instead of claiming `"ok": true`.
+
+This skill does not require a `manage_skills` tool. If Odysseus reports that
+`manage_skills` is unavailable instead of running bash, delete/re-import and
+confirm the imported version is `1.1.3`.
 
 ## State model
 
