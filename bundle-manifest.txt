@@ -29,9 +29,11 @@ scripts/cwo_core/waivers.py
 scripts/cwo_core/workgraph_markdown.py
 scripts/cwo_doctor.py
 scripts/route_work.py
+scripts/scaffold_workgraph.py
 SKILL.md
 tests/test_bundle_budget.py
 tests/test_cwo_doctor.py
 tests/test_no_beads_import.py
 tests/test_prompt_coach.py
 tests/test_route_work.py
+tests/test_scaffold_markdown.py
