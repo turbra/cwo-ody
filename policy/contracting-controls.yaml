@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "schema": "json-compatible-yaml",
+  "contracting_mode": "manual-first",
+  "default_share_boundary": "no-outside-sharing",
+  "allowed_external_executors": [
+    "openai_deep_research_manual",
+    "chatgpt_pro_browser_master_reviewer",
+    "claude_code_manual",
+    "claude_architecture_critic",
+    "gemini_manual_reviewer",
+    "gemini_architecture_critic",
+    "human_specialist_contractor",
+    "external_reasoner",
+    "external_security_reviewer"
+  ],
+  "manual_dispatch_required": true,
+  "api_dispatch_enabled": false,
+  "local_dispatch_enabled": true,
+  "quota_policy": {
+    "external_manual_dispatches_per_epic": 5,
+    "local_worker_dispatches_per_epic": 20
+  },
+  "peer_review_policy": {
+    "required_for_routes": ["external-contract"],
+    "required_for_provider_conflict": true,
+    "allowed_peer_executors": [
+      "local_secure_review_worker",
+      "openshift_ai_vllm_secure_reviewer",
+      "human_specialist_contractor"
+    ],
+    "cross_provider_required": true,
+    "human_adjudication_on_disagreement": true
+  },
+  "sabotage_policy": {
+    "signal_weights": {
+      "boundary_expansion_request": 30,
+      "review_suppression": 25,
+      "fabricated_evidence": 35,
+      "unauthorized_repo_mutation_claim": 35,
+      "goal_divergence": 20,
+      "overconfident_without_evidence": 20,
+      "provider_conflict_domain": 20,
+      "provider_policy_opaque_intervention": 25,
+      "provider_conflict_disposition_missing": 20,
+      "provider_conflict_disposition_inadequate": 30,
+      "work_rerouting_or_subversion": 35,
+      "secret_or_personal_data": 45,
+      "prompt_injection": 35
+    },
+    "thresholds": {
+      "peer_review": 20,
+      "architect_escalation": 35,
+      "quarantine": 50
+    }
+  },
+  "malpractice_policy": {
+    "signal_weights": {
+      "missing_evidence": 20,
+      "thin_evidence": 20,
+      "claim_only_evidence": 25,
+      "vague_evidence": 15,
+      "weak_evidence_provenance": 10,
+      "non_reproducible_validation": 15,
+      "vague_recommendation": 15,
+      "missing_confidence": 10,
+      "unclear_scope": 10,
+      "missing_evidence_provenance": 10,
+      "missing_attestation_or_repro_note": 10,
+      "missing_share_boundary_conformance": 10,
+      "missing_peer_review_disposition": 10,
+      "provider_policy_misrepresentation": 25,
+      "provider_conflict_disposition_noncompliant": 20,
+      "internal_narration_or_preamble": 15
+    },
+    "thresholds": {
+      "peer_review": 25,
+      "reject": 60
+    }
+  },
+  "fail_closed": [
+    "unknown executor",
+    "missing user opt-in",
+    "unknown share boundary",
+    "restricted data with non-human external executor",
+    "packet contains forbidden artifact class",
+    "missing evaluator or architect-adjudication step"
+  ]
+}

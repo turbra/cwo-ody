@@ -11,4 +11,28 @@ update this pin, run the test suite.
 
 ## Vendored files
 
-(none yet — milestone 0 contains no upstream code)
+### cwo_core modules (10)
+
+- scripts/cwo_core/__init__.py
+- scripts/cwo_core/coach.py
+- scripts/cwo_core/paths.py (adapted: repo-root check drops schemas/ requirement)
+- scripts/cwo_core/policy.py
+- scripts/cwo_core/routing.py
+- scripts/cwo_core/routing_signals.py
+- scripts/cwo_core/synthesis.py
+- scripts/cwo_core/util.py
+- scripts/cwo_core/waivers.py
+- scripts/cwo_core/workgraph_markdown.py
+
+### Policy YAML files (10)
+
+- policy/contracting-controls.yaml
+- policy/execution-environments.yaml
+- policy/executor-registry.yaml
+- policy/expert-registry.yaml
+- policy/peer-review-policy.yaml
+- policy/provider-registry.yaml
+- policy/routing-policy.yaml
+- policy/share-boundaries.yaml
+- policy/synthesis-policy.yaml
+- policy/zero-trust-consensus-policy.yaml

@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "schema": "json-compatible-yaml",
+  "mode": "cwo-native",
+  "default_pattern": "independent-then-synthesize",
+  "synthesis_owner": "frontier_architect",
+  "default_share_boundary": "redacted-packet",
+  "active_modes": ["requested", "accepted"],
+  "activation_states": {
+    "none": "No synthesis trigger matched; keep independent evidence and normal adjudication.",
+    "recommended": "Conservative triggers matched; prompt the user before adding a synthesis lane.",
+    "requested": "The user explicitly asked for synthesis, fusion, consensus, or models working together.",
+    "accepted": "The user accepted a coach recommendation or enabled synthesis with the scaffold flag.",
+    "disabled": "Synthesis was explicitly declined; do not add a synthesis lane."
+  },
+  "input_disposition_policy": {
+    "use_as_synthesis_input": ["accepted", "accepted-with-modification"],
+    "salvage_only": ["salvage-only"],
+    "summarize_as_open_risk": ["needs-investigation", "deferred"],
+    "exclude_as_rejected": ["rejected"],
+    "quarantine": ["quarantined", "boundary-tainted"],
+    "partial_only": ["missing", "empty", "timed-out"]
+  },
+  "salvage_only_provider_camps": ["google"],
+  "partial_synthesis_policy": {
+    "allow_partial": true,
+    "minimum_usable_inputs": 2,
+    "partial_status": "partial",
+    "required_missing_input_fields": [
+      "lane",
+      "provider_camp",
+      "disposition",
+      "reason",
+      "boundary_status"
+    ],
+    "blocked_when": [
+      "fewer than minimum_usable_inputs accepted or accepted-with-modification inputs",
+      "all external inputs are quarantined or boundary-tainted"
+    ]
+  },
+  "provider_conflict_policy": {
+    "carry_forward_route_domains": true,
+    "require_provider_provenance": true,
+    "require_conflict_summary": true
+  },
+  "explicit_terms": [
+    "synthesize",
+    "synthesis",
+    "model synthesis",
+    "fusion",
+    "model fusion",
+    "openrouter fusion",
+    "ensemble",
+    "combine answers",
+    "consensus",
+    "model camps",
+    "work together",
+    "more eyes",
+    "avengers",
+    "joint answer",
+    "unified answer"
+  ],
+  "creativity_terms": [
+    "creative",
+    "creativity",
+    "novel",
+    "new capability",
+    "design space",
+    "brainstorm",
+    "explore alternatives",
+    "union",
+    "intersection",
+    "trade space"
+  ],
+  "architecture_terms": [
+    "architecture",
+    "architect",
+    "control plane",
+    "policy",
+    "routing",
+    "schema",
+    "public contract",
+    "cross-cutting",
+    "migration"
+  ],
+  "provider_camps": {
+    "codex": {
+      "terms": ["codex", "workerbee", "subagent", "gpt-5.3", "gpt 5.3", "gpt-5.5", "gpt 5.5"],
+      "executor": "frontier_architect"
+    },
+    "openai": {
+      "terms": ["chatgpt", "openai", "chatgpt pro", "extended reasoning"],
+      "executor": "chatgpt_pro_browser_master_reviewer"
+    },
+    "anthropic": {
+      "terms": ["claude", "opus", "anthropic"],
+      "executor": "claude_architecture_critic"
+    },
+    "google": {
+      "terms": ["gemini", "agy", "antigravity", "google"],
+      "executor": "gemini_architecture_critic"
+    },
+    "local": {
+      "terms": ["local worker", "local inference", "vllm", "openshift ai", "rhoai", "glm", "glm-5.2", "glm 5.2", "glm52"],
+      "executor": "rhoai_glm_architecture_critic"
+    }
+  },
+  "default_panel": [
+    {
+      "executor": "frontier_architect",
+      "role": "synthesis-owner",
+      "provider_camp": "codex",
+      "effort": "xhigh",
+      "external": false
+    },
+    {
+      "executor": "internal_worker",
+      "role": "codex-review-workerbee",
+      "provider_camp": "codex",
+      "effort": "review-only",
+      "external": false
+    },
+    {
+      "executor": "claude_architecture_critic",
+      "role": "architecture-critic",
+      "provider_camp": "anthropic",
+      "effort": "high-or-stronger",
+      "external": true
+    },
+    {
+      "executor": "rhoai_glm_architecture_critic",
+      "role": "architecture-critic",
+      "provider_camp": "local",
+      "effort": "thinking-enabled",
+      "external": false
+    },
+    {
+      "executor": "gemini_architecture_critic",
+      "role": "architecture-critic",
+      "provider_camp": "google",
+      "effort": "pro-preview",
+      "external": true,
+      "synthesis_use": "salvage-only"
+    },
+    {
+      "executor": "chatgpt_pro_browser_master_reviewer",
+      "role": "master-plan-review",
+      "provider_camp": "openai",
+      "effort": "extended-reasoning",
+      "external": true
+    }
+  ],
+  "artifact_contract": [
+    "consensus points",
+    "material disagreements",
+    "unsupported claims",
+    "risk deltas",
+    "evidence provenance",
+    "input evaluator dispositions",
+    "salvage-only input summary",
+    "provider conflict flags",
+    "partial or missing lane summary",
+    "recommended plan revisions"
+  ]
+}

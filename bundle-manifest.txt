@@ -1,12 +1,33 @@
 # bundle-manifest.txt — every git-tracked file, one per line, sorted.
 # tests/test_bundle_budget.py asserts exact equality with `git ls-files`.
+.github/workflows/ci.yml
 README.md
 SKILL.md
 bundle-manifest.txt
-.github/workflows/ci.yml
 docs/superpowers/plans/2026-07-07-cwo-odysseus-skill.md
 docs/superpowers/specs/2026-07-07-cwo-odysseus-skill-design.md
+policy/contracting-controls.yaml
+policy/execution-environments.yaml
+policy/executor-registry.yaml
+policy/expert-registry.yaml
+policy/peer-review-policy.yaml
+policy/provider-registry.yaml
+policy/routing-policy.yaml
+policy/share-boundaries.yaml
+policy/synthesis-policy.yaml
+policy/zero-trust-consensus-policy.yaml
 references/upstream-pin.md
+scripts/cwo_core/__init__.py
+scripts/cwo_core/coach.py
+scripts/cwo_core/paths.py
+scripts/cwo_core/policy.py
+scripts/cwo_core/routing.py
+scripts/cwo_core/routing_signals.py
+scripts/cwo_core/synthesis.py
+scripts/cwo_core/util.py
+scripts/cwo_core/waivers.py
+scripts/cwo_core/workgraph_markdown.py
 scripts/cwo_doctor.py
 tests/test_bundle_budget.py
 tests/test_cwo_doctor.py
+tests/test_no_beads_import.py
