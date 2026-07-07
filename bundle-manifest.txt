@@ -15,7 +15,9 @@ policy/share-boundaries.yaml
 policy/synthesis-policy.yaml
 policy/zero-trust-consensus-policy.yaml
 README.md
+references/chat-protocol.md
 references/upstream-pin.md
+references/workgraph-lifecycle.md
 scripts/coach_prompt.py
 scripts/continue_sprint.py
 scripts/cwo_core/coach.py
@@ -33,6 +35,7 @@ scripts/route_work.py
 scripts/scaffold_workgraph.py
 scripts/summarize_resume_state.py
 SKILL.md
+templates/markdown-workgraph.md
 tests/test_bundle_budget.py
 tests/test_continue_sprint.py
 tests/test_cwo_doctor.py
