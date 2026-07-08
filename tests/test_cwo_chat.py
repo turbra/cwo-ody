@@ -11,6 +11,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CWO_CHAT = REPO_ROOT / "scripts" / "cwo_chat.py"
 
+# Add scripts directory to path for importing functions
+sys.path.insert(0, str(REPO_ROOT / "scripts"))
+
 
 def run_cwo_chat(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
@@ -259,6 +262,106 @@ class CwoChatTests(unittest.TestCase):
                 session = json.load(f)
             self.assertEqual(session.get("parallelism"), "no-subagents",
                            "no subagents should map to 'no-subagents'")
+
+    def test_run_functions_importable_and_return_text(self) -> None:
+        """Test that run_start/run_answer/run_continue are importable and return text."""
+        from cwo_chat import run_start, run_answer, run_continue, CwoChatError
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Test run_start
+            output = run_start("test goal", workspace)
+            self.assertIsInstance(output, str)
+            self.assertIn("===== POST THIS MESSAGE TO THE USER =====", output)
+            self.assertIn("===== NEXT COMMAND (run after the user replies) =====", output)
+
+            # Session file should exist
+            session_files = list((workspace / ".cwo").glob("session-*.json"))
+            self.assertEqual(len(session_files), 1)
+
+    def test_answer_discovers_newest_session(self) -> None:
+        """Test that run_answer discovers newest session when session_path is None."""
+        from cwo_chat import run_start, run_answer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Create a session via run_start
+            run_start("test goal", workspace)
+
+            # Call run_answer without providing session_path
+            output = run_answer("defaults", None, workspace)
+            self.assertIsInstance(output, str)
+            self.assertIn("===== POST THIS MESSAGE TO THE USER =====", output)
+
+            # Workgraph should be created
+            workgraph_files = list((workspace / ".cwo").glob("workgraph-*.md"))
+            self.assertEqual(len(workgraph_files), 1)
+
+            # Output should contain the absolute workgraph path
+            self.assertIn(str(workgraph_files[0].resolve()), output)
+
+    def test_continue_discovers_newest_workgraph(self) -> None:
+        """Test that run_continue discovers newest workgraph when workgraph_path is None."""
+        from cwo_chat import run_start, run_answer, run_continue
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Create session and workgraph via run_start and run_answer
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Call run_continue without providing workgraph_path
+            output = run_continue(None, workspace)
+            self.assertIsInstance(output, str)
+            self.assertIn("===== POST THIS MESSAGE TO THE USER =====", output)
+            self.assertIn("Recommended", output)
+
+    def test_discovery_fails_closed_when_empty(self) -> None:
+        """Test that run_answer and run_continue raise CwoChatError when nothing is found."""
+        from cwo_chat import run_answer, run_continue, CwoChatError
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Try run_answer on empty workspace
+            with self.assertRaises(CwoChatError) as ctx:
+                run_answer("defaults", None, workspace)
+            self.assertIn("run start first", str(ctx.exception))
+
+            # Try run_continue on empty workspace
+            with self.assertRaises(CwoChatError) as ctx:
+                run_continue(None, workspace)
+            self.assertIn("run start and answer first", str(ctx.exception))
+
+    def test_cli_answer_without_session_flag_uses_discovery(self) -> None:
+        """Test that CLI answer without --session flag uses discovery."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # First, run start
+            proc = run_cwo_chat(
+                "start",
+                "test discovery",
+                "--workspace", tmpdir
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            # Run answer WITHOUT --session flag
+            proc = run_cwo_chat(
+                "answer",
+                "defaults",
+                "--workspace", tmpdir
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+            # Check for delimiter blocks
+            self.assertIn("===== POST THIS MESSAGE TO THE USER =====", proc.stdout)
+            self.assertIn("===== NEXT COMMAND (run after the user replies) =====", proc.stdout)
+
+            # Workgraph should exist
+            workgraph_files = list((Path(tmpdir) / ".cwo").glob("workgraph-*.md"))
+            self.assertEqual(len(workgraph_files), 1)
 
 
 if __name__ == "__main__":

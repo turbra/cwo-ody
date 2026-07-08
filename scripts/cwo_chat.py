@@ -28,6 +28,11 @@ from continue_sprint import load_markdown_items, build_continuation_brief
 POST_DELIMITER = "===== POST THIS MESSAGE TO THE USER ====="
 NEXT_DELIMITER = "===== NEXT COMMAND (run after the user replies) ====="
 
+
+class CwoChatError(Exception):
+    """Exception raised by cwo_chat functions."""
+    pass
+
 # Answer-to-flag mapping table
 REPLY_MAPPING = {
     "beads_context_depth": ["none", "summary", "focused", "heavy", "audit"],
@@ -57,6 +62,38 @@ def slug_from_text(text: str) -> str:
     return slug[:60]
 
 
+def discover_newest_session(workspace: Path) -> Path:
+    """Discover the newest session-*.json file in <workspace>/.cwo/"""
+    cwo_dir = workspace / ".cwo"
+    if not cwo_dir.exists():
+        raise CwoChatError(
+            f"no CWO session found under {workspace}/.cwo — run start first"
+        )
+
+    sessions = sorted(cwo_dir.glob("session-*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not sessions:
+        raise CwoChatError(
+            f"no CWO session found under {workspace}/.cwo — run start first"
+        )
+    return sessions[0]
+
+
+def discover_newest_workgraph(workspace: Path) -> Path:
+    """Discover the newest workgraph-*.md file in <workspace>/.cwo/"""
+    cwo_dir = workspace / ".cwo"
+    if not cwo_dir.exists():
+        raise CwoChatError(
+            f"no workgraph found under {workspace}/.cwo — run start and answer first"
+        )
+
+    workgraphs = sorted(cwo_dir.glob("workgraph-*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not workgraphs:
+        raise CwoChatError(
+            f"no workgraph found under {workspace}/.cwo — run start and answer first"
+        )
+    return workgraphs[0]
+
+
 def load_session(path: Path) -> dict:
     """Load and validate session JSON."""
     try:
@@ -67,8 +104,10 @@ def load_session(path: Path) -> dict:
             if key not in session:
                 raise ValueError(f"missing required key: {key}")
         return session
-    except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
-        raise SystemExit(f"Error loading session from {path}: {e}") from None
+    except FileNotFoundError as e:
+        raise CwoChatError(f"Error loading session from {path}: {e}") from None
+    except (json.JSONDecodeError, ValueError) as e:
+        raise CwoChatError(f"Error loading session from {path}: {e}") from None
 
 
 def save_session(path: Path, session: dict) -> None:
@@ -308,21 +347,20 @@ def render_continue_next(workgraph_path: Path) -> str:
     ])
 
 
-def cmd_start(goal: str, workspace: Path) -> None:
-    """Handle the start command."""
+def run_start(goal: str, workspace: Path) -> str:
+    """Start a new CWO session and return rendered output.
+
+    Raises CwoChatError if doctor check fails or other issues occur.
+    """
     workspace = Path(workspace).resolve()
 
     # Step 1: Run doctor check
     skill_root = Path(__file__).resolve().parents[1]
     doctor_result = check(skill_root)
     if not doctor_result.get("ok"):
-        print(POST_DELIMITER)
-        print("")
-        print("ERROR: CWO skill installation is broken:")
-        print("")
-        print(json.dumps(doctor_result, indent=2))
-        print("")
-        sys.exit(1)
+        # Doctor JSON is raised as the error message
+        doctor_json = json.dumps(doctor_result, indent=2)
+        raise CwoChatError(doctor_json)
 
     # Step 2: Run coach in-process
     result = coach_orchestration_prompt(
@@ -364,23 +402,34 @@ def cmd_start(goal: str, workspace: Path) -> None:
     post = render_start_post(result, session)
     next_cmd = render_start_next(session_path)
 
-    print(post)
-    print("")
-    print(next_cmd)
+    return f"{post}\n\n{next_cmd}"
 
 
-def cmd_answer(reply: str, session_path: Path) -> None:
-    """Handle the answer command."""
-    # Step 1: Load session
-    session = load_session(Path(session_path))
+def run_answer(reply: str, session_path: Path | None, workspace: Path) -> str:
+    """Answer coaching questions and return rendered output.
 
-    # Step 2: Map reply
+    If session_path is None, discover the newest session file in workspace.
+    Raises CwoChatError if no session is found or other issues occur.
+    """
+    workspace = Path(workspace).resolve()
+
+    # Step 1: Discover or use provided session path
+    if session_path is None:
+        session_path = discover_newest_session(workspace)
+    else:
+        session_path = Path(session_path).resolve()
+
+    # Step 2: Load session
+    session = load_session(session_path)
+
+    # Step 3: Map reply
     flags, used_defaults = map_reply(reply, session.get("questions", []))
 
-    # Step 3: Prepare workspace and paths
-    workspace = session_path.parent.parent  # .cwo is parent of session file
+    # Step 4: Prepare workspace
+    if session_path.parent.parent != workspace:
+        workspace = session_path.parent.parent  # .cwo is parent of session file
 
-    # Step 4: Re-run classify_work and scaffold
+    # Step 5: Re-run classify_work and scaffold
     goal = session.get("goal")
     scaffold_size = flags.get("scaffold_size", "full")
     classify_kwargs = {
@@ -400,13 +449,13 @@ def cmd_answer(reply: str, session_path: Path) -> None:
     plan = planned_graph(goal, route, scaffold_size=scaffold_size)
     workgraph_markdown = markdown_workgraph_plan(goal, plan)
 
-    # Step 5: Write workgraph file
+    # Step 6: Write workgraph file
     slug = session.get("slug")
     workgraph_path = workspace / ".cwo" / f"workgraph-{slug}.md"
     with open(workgraph_path, "w") as f:
         f.write(workgraph_markdown)
 
-    # Step 6: Update session JSON
+    # Step 7: Update session JSON
     session["flags"] = {
         k: v for k, v in flags.items() if k != "parallelism"
     }
@@ -415,36 +464,42 @@ def cmd_answer(reply: str, session_path: Path) -> None:
         session["parallelism"] = flags["parallelism"]
     save_session(session_path, session)
 
-    # Step 7: Render output
+    # Step 8: Render output
     post = render_answer_post(session, flags, used_defaults, workgraph_path)
     next_cmd = render_answer_next()
 
-    print(post)
-    print("")
-    print(next_cmd)
+    return f"{post}\n\n{next_cmd}"
 
 
-def cmd_continue(workgraph_path: Path, epic: str) -> None:
-    """Handle the continue command."""
-    workgraph_path = Path(workgraph_path).resolve()
+def run_continue(workgraph_path: Path | None, workspace: Path, epic: str = "epic") -> str:
+    """Continue a sprint and return rendered output.
 
-    # Step 1: Validate workgraph exists
+    If workgraph_path is None, discover the newest workgraph file in workspace.
+    Raises CwoChatError if no workgraph is found or other issues occur.
+    """
+    workspace = Path(workspace).resolve()
+
+    # Step 1: Discover or use provided workgraph path
+    if workgraph_path is None:
+        workgraph_path = discover_newest_workgraph(workspace)
+    else:
+        workgraph_path = Path(workgraph_path).resolve()
+
+    # Step 2: Validate workgraph exists
     if not workgraph_path.exists():
-        raise SystemExit(f"Workgraph file not found: {workgraph_path}")
+        raise CwoChatError(f"Workgraph file not found: {workgraph_path}")
 
-    # Step 2: Load and process
+    # Step 3: Load and process
     raw_items = load_markdown_items(workgraph_path, epic)
     continuation_brief = build_continuation_brief(
         raw_items, epic_id=epic, sprint_id=None, source="markdown-workgraph"
     )
 
-    # Step 3: Render output
+    # Step 4: Render output
     post = render_continue_post(continuation_brief)
     next_cmd = render_continue_next(workgraph_path)
 
-    print(post)
-    print("")
-    print(next_cmd)
+    return f"{post}\n\n{next_cmd}"
 
 
 def main() -> None:
@@ -459,26 +514,29 @@ def main() -> None:
     # answer subcommand
     answer_parser = subparsers.add_parser("answer", help="Answer coaching questions")
     answer_parser.add_argument("reply", help="User reply text")
-    answer_parser.add_argument("--session", type=Path, required=True, help="Session file path")
+    answer_parser.add_argument("--session", type=Path, default=None, help="Session file path (default: discover newest)")
+    answer_parser.add_argument("--workspace", type=Path, default=Path.cwd(), help="Workspace path (default: cwd)")
 
     # continue subcommand
     continue_parser = subparsers.add_parser("continue", help="Continue a sprint")
-    continue_parser.add_argument("workgraph", help="Workgraph file path")
+    continue_parser.add_argument("workgraph", nargs="?", default=None, help="Workgraph file path (default: discover newest)")
+    continue_parser.add_argument("--workspace", type=Path, default=Path.cwd(), help="Workspace path (default: cwd)")
     continue_parser.add_argument("--epic", default="epic", help="Epic ID (default: epic)")
 
     args = parser.parse_args()
 
     try:
         if args.command == "start":
-            cmd_start(args.goal, args.workspace)
+            output = run_start(args.goal, args.workspace)
+            print(output)
         elif args.command == "answer":
-            cmd_answer(args.reply, args.session)
+            output = run_answer(args.reply, args.session, args.workspace)
+            print(output)
         elif args.command == "continue":
-            cmd_continue(args.workgraph, args.epic)
-    except SystemExit:
-        raise
-    except Exception as e:
-        sys.stderr.write(f"Error: {e}\n")
+            output = run_continue(args.workgraph, args.workspace, args.epic)
+            print(output)
+    except CwoChatError as e:
+        sys.stderr.write(f"{e}\n")
         sys.exit(1)
 
 
