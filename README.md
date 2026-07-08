@@ -36,6 +36,10 @@ Workgraphs are Markdown files stored under `<workspace>/.cwo/` in the pod
 (reduced durability vs. upstream's Beads backend — by design; the pod has
 no `bd`).
 
+## OpenShift deployment
+
+When running Odysseus on OpenShift with user-added custom MCP servers, deploy the included MCP auto-reconnect patch to prevent stdio server crashes after first use. See `openshift/README.md` for setup and `./openshift/apply-mcp-patch.sh` to apply or remove.
+
 ## Development
 
 `python3 -m unittest discover -s tests` — stdlib only, no third-party deps.

@@ -14,6 +14,9 @@ policy/routing-policy.yaml
 policy/share-boundaries.yaml
 policy/synthesis-policy.yaml
 policy/zero-trust-consensus-policy.yaml
+openshift/apply-mcp-patch.sh
+openshift/mcp_manager_patched.py
+openshift/README.md
 README.md
 references/chat-protocol.md
 references/mcp-setup.md
