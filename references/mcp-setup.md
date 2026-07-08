@@ -6,8 +6,8 @@ Odysseus treats skill text as untrusted context by design (Odysseus issue #2959)
 This means local models receive CWO's multi-step protocol as narrative text, not
 as trusted function schemas — so protocol adherence varies widely by model.
 
-The `cwo_mcp_server.py` adapter moves the three relay verbs (cwo_start,
-cwo_answer, cwo_continue) into MCP tools. Once registered, the Odysseus model
+The `cwo_mcp_server.py` adapter moves the four relay verbs (cwo_start,
+cwo_answer, cwo_continue, cwo_mark) into MCP tools. Once registered, the Odysseus model
 receives them on the trusted function-schema list, bypassing the untrusted-text
 problem. Local models follow the protocol reliably.
 
@@ -52,6 +52,12 @@ returns the work items plus the workgraph file path.
 Returns the recommended next work item and any blocking issues. The model
 should track the workgraph path from the prior cwo_answer call and pass it
 (or omit it to auto-discover the newest).
+
+### cwo_mark
+**Call after YOU finish an item's work** to update its status and record evidence.
+Pass the item id, status ('open', 'in-progress', 'closed', 'blocked'), and a
+one-line evidence summary. Appends the evidence with a UTC ISO timestamp. After
+marking an item, call cwo_continue to get the next recommended item.
 
 ## Expected Flow
 

@@ -20,7 +20,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from cwo_chat import CwoChatError, run_answer, run_continue, run_start
+from cwo_chat import CwoChatError, run_answer, run_continue, run_mark, run_start
 
 SERVER_NAME = "cwo"
 
@@ -82,6 +82,24 @@ TOOLS: list[dict] = [
             "required": [],
         },
     },
+    {
+        "name": "cwo_mark",
+        "description": (
+            "Record completion/progress of a workgraph item: updates its Status "
+            "and appends evidence. Call after YOU finish an item's work (status "
+            "'closed'), or to mark 'in-progress'/'blocked'. Then call cwo_continue."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "item_id": {"type": "string", "description": "The work item ID to mark."},
+                "status": {"type": "string", "description": "New status: 'open', 'in-progress', 'closed', or 'blocked'."},
+                "evidence": {"type": "string", "description": "One-line evidence text describing the action or completion."},
+                "workgraph": {"type": "string", "description": "Optional workgraph path; defaults to the newest workgraph."},
+            },
+            "required": ["item_id", "status", "evidence"],
+        },
+    },
 ]
 
 
@@ -108,6 +126,16 @@ def handle_tool(name: str, arguments: dict) -> str:
             return run_continue(
                 Path(workgraph) if workgraph else None,
                 ws,
+                transport="mcp",
+            )
+        if name == "cwo_mark":
+            workgraph = str(arguments.get("workgraph") or "").strip()
+            return run_mark(
+                str(arguments["item_id"]),
+                str(arguments["status"]),
+                str(arguments["evidence"]),
+                ws,
+                Path(workgraph) if workgraph else None,
                 transport="mcp",
             )
         return f"error: unknown tool {name!r}"

@@ -22,9 +22,11 @@ from that path).
 
 ## Execute
 
-Work items in dependency order. After finishing an item, edit its
-`- Status:` field in the file (`open` → `closed`) and append an evidence
-line under the item: commands run, artifacts changed, residual risk.
+Work items in dependency order. After finishing an item, call the cwo_mark
+tool (item id, status 'closed', one-line evidence) to update its Status
+field and record completion. The evidence line records commands run,
+artifacts changed, residual risk, and a UTC ISO timestamp. Do not edit the
+workgraph file by hand.
 Item format is defined by scripts/cwo_core/workgraph_markdown.py (Type,
 Lane, Labels, Depends on lanes fields).
 

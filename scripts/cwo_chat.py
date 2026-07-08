@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Add sibling scripts directory to path for in-process imports
@@ -23,6 +25,7 @@ from cwo_core.coach import coach_orchestration_prompt
 from cwo_core.routing import classify_work
 from scaffold_workgraph import planned_graph, markdown_workgraph_plan
 from continue_sprint import load_markdown_items, build_continuation_brief
+from summarize_resume_state import parse_markdown_workgraph
 
 # Output delimiters
 POST_DELIMITER = "===== POST THIS MESSAGE TO THE USER ====="
@@ -320,7 +323,7 @@ def render_start_post(result: dict, session: dict, workgraph_path: Path, applied
     # Add work-item execution guidance for mcp transport
     if transport == "mcp":
         lines.extend(["", "## Work Item Execution", ""])
-        lines.append("Work items are executed by YOU (the agent): do the item's work, then edit its Status line in the workgraph file, then call cwo_continue for the next item.")
+        lines.append("When you finish an item's work, call the cwo_mark tool (item id, status 'closed', one-line evidence) — do not edit the workgraph file by hand.")
 
         # Add FINAL section with ask_user imperative for MCP
         lines.extend(["", "## REQUIRED NEXT ACTION FOR YOU (the assistant)", ""])
@@ -337,7 +340,7 @@ def render_start_post(result: dict, session: dict, workgraph_path: Path, applied
         }
         lines.append(json.dumps(ask_user_json, indent=2))
         lines.append("")
-        lines.append("When the selection arrives: adjustments -> call cwo_answer with it; proceed -> work the first item (see Work Item Execution above).")
+        lines.append("When the selection arrives: adjustments -> call cwo_answer with it; proceed -> call the cwo_continue tool NOW.")
 
     return "\n".join(lines)
 
@@ -420,7 +423,7 @@ def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str]
     # Add work-item execution guidance for MCP transport
     if transport == "mcp":
         lines.extend(["", "## Work Item Execution", ""])
-        lines.append("Work items are executed by YOU (the agent): do the item's work, then edit its Status line in the workgraph file, then call cwo_continue for the next item.")
+        lines.append("When you finish an item's work, call the cwo_mark tool (item id, status 'closed', one-line evidence) — do not edit the workgraph file by hand.")
 
         # Add FINAL section with ask_user imperative for MCP
         lines.extend(["", "## REQUIRED NEXT ACTION FOR YOU (the assistant)", ""])
@@ -437,7 +440,7 @@ def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str]
         }
         lines.append(json.dumps(ask_user_json, indent=2))
         lines.append("")
-        lines.append("When the selection arrives: further adjustments -> call cwo_answer with it; proceed -> work the first item (see Work Item Execution above).")
+        lines.append("When the selection arrives: further adjustments -> call cwo_answer with it; proceed -> call the cwo_continue tool NOW.")
 
     return "\n".join(lines)
 
@@ -510,7 +513,7 @@ def render_continue_post(continuation_brief: dict, transport: str = "cli") -> st
     # Add work-item execution guidance and typing tip for mcp transport
     if transport == "mcp":
         lines.extend(["", "## Work Item Execution", ""])
-        lines.append("Work items are executed by YOU (the agent): do the item's work, then edit its Status line in the workgraph file, then call cwo_continue for the next item.")
+        lines.append("When you finish an item's work, call the cwo_mark tool (item id, status 'closed', one-line evidence) — do not edit the workgraph file by hand.")
         lines.append("")
         lines.append("Tip for the user: start typed follow-ups with 'mcp:' so this host routes them to tools.")
 
@@ -519,16 +522,16 @@ def render_continue_post(continuation_brief: dict, transport: str = "cli") -> st
         lines.append("Call your ask_user tool NOW with exactly this shape (adjust option labels as needed; keep the 'mcp: ' prefix on EVERY label; do NOT print options as plain text):")
         lines.append("")
         ask_user_json = {
-            "question": "Proceed with recommended item, show blocked details, or adjust plan?",
+            "question": "Work the recommended item, show blocked details, or adjust plan?",
             "options": [
-                {"label": "mcp: proceed with recommended item"},
+                {"label": "mcp: work the recommended item now"},
                 {"label": "mcp: show blocked details"},
-                {"label": "mcp: adjust plan"}
+                {"label": "mcp: adjust the plan"}
             ]
         }
         lines.append(json.dumps(ask_user_json, indent=2))
         lines.append("")
-        lines.append("When the selection arrives: proceed -> work the recommended item; show details -> relay blockers info; adjust -> call cwo_answer.")
+        lines.append("When the selection arrives: work -> do the item's work, then call cwo_mark when done; show details -> relay blockers info; adjust -> call cwo_answer.")
 
     return "\n".join(lines)
 
@@ -544,6 +547,197 @@ def render_continue_next(workgraph_path: Path, transport: str = "cli") -> str:
         "",
         f'(none — work the recommended item, update its Status in "{abs_path}", then rerun: python3 "{Path(__file__).resolve()}" continue "{abs_path}")',
     ])
+
+
+def run_mark(
+    item_id: str,
+    status: str,
+    evidence: str,
+    workspace: Path,
+    workgraph_path: Path | None = None,
+    transport: str = "cli",
+) -> str:
+    """Mark a workgraph item with new status and evidence.
+
+    Updates the item's Status field and appends an Evidence line with timestamp.
+    Raises CwoChatError if validation fails.
+    Returns rendered confirmation with tool-anchored tail.
+    """
+    workspace = Path(workspace).resolve()
+    valid_statuses = {"open", "in-progress", "closed", "blocked"}
+
+    # Step 1: Discover or use provided workgraph path
+    if workgraph_path is None:
+        workgraph_path = discover_newest_workgraph(workspace)
+    else:
+        workgraph_path = Path(workgraph_path).resolve()
+        if not workgraph_path.exists():
+            newest_path = None
+            try:
+                newest_path = discover_newest_workgraph(workspace)
+            except CwoChatError:
+                pass
+            if newest_path:
+                raise CwoChatError(
+                    f"workgraph not found: {workgraph_path}. Omit the workgraph argument to use the newest workgraph automatically (newest: {newest_path.resolve()})"
+                )
+            else:
+                raise CwoChatError(
+                    f"workgraph not found: {workgraph_path}. Omit the workgraph argument to use the newest workgraph automatically"
+                )
+
+    # Step 2: Validate status
+    if status.lower() not in valid_statuses:
+        raise CwoChatError(
+            f"invalid status '{status}'; must be one of: {', '.join(sorted(valid_statuses))}"
+        )
+    status = status.lower()
+
+    # Step 3: Parse workgraph to find item and collect all ids
+    try:
+        raw_items = parse_markdown_workgraph(workgraph_path)
+    except SystemExit as e:
+        raise CwoChatError(str(e)) from None
+
+    item_ids = [item.get("id", "") for item in raw_items]
+    if not item_ids:
+        raise CwoChatError("no items found in workgraph")
+
+    # Step 4: Validate item_id
+    if item_id not in item_ids:
+        ids_str = ", ".join(sorted(item_ids))
+        raise CwoChatError(
+            f"item_id '{item_id}' not found in workgraph. Valid ids: {ids_str}"
+        )
+
+    # Step 5: Read the workgraph file and update it
+    workgraph_text = workgraph_path.read_text(encoding="utf-8")
+    old_status = None
+
+    # Find the item section and update it
+    # Item sections start with "### <id>: <title>" and continue until next "###" or EOF
+    lines = workgraph_text.split("\n")
+    output_lines: list[str] = []
+    i = 0
+    found_item = False
+    item_start_index = -1
+    status_line_index = -1
+
+    while i < len(lines):
+        line = lines[i]
+        # Check if this is the item we're looking for
+        heading_match = re.match(r"^### ([^:]+):\s*(.+?)$", line)
+        if heading_match:
+            current_id = heading_match.group(1).strip()
+            if current_id == item_id:
+                found_item = True
+                item_start_index = len(output_lines)
+                output_lines.append(line)
+                i += 1
+                # Process the field block after the heading
+                while i < len(lines):
+                    field_line = lines[i]
+                    # Stop if we hit another heading or end of field block
+                    if field_line.strip().startswith("###"):
+                        break
+                    if field_line.strip().startswith("####"):
+                        # End of field block (next subsection)
+                        break
+
+                    field_match = re.match(r"^-\s+([^:]+):\s*(.+?)$", field_line)
+                    if field_match:
+                        field_name = field_match.group(1).strip()
+                        field_value = field_match.group(2).strip()
+
+                        if field_name.lower() == "status":
+                            old_status = field_value
+                            # Replace with new status
+                            output_lines.append(f"- {field_name}: {status}")
+                            status_line_index = len(output_lines) - 1
+                        else:
+                            output_lines.append(field_line)
+                    elif field_line.strip() == "":
+                        # Empty line might be end of fields
+                        output_lines.append(field_line)
+                    elif field_line.strip().startswith("-"):
+                        # Field line (possibly Evidence)
+                        output_lines.append(field_line)
+                    else:
+                        # Non-field line (end of field block)
+                        break
+                    i += 1
+
+                # If no Status line found, insert one after the heading's field block
+                if status_line_index == -1:
+                    # Find where to insert it (after existing fields)
+                    insert_pos = item_start_index + 1
+                    # Skip heading
+                    temp_i = 1
+                    while insert_pos + temp_i < len(output_lines):
+                        test_line = output_lines[insert_pos + temp_i]
+                        if test_line.strip().startswith("-") and not test_line.strip().startswith("####"):
+                            temp_i += 1
+                        else:
+                            break
+                    status_line_index = insert_pos + temp_i
+                    output_lines.insert(status_line_index, f"- Status: {status}")
+
+                # Append Evidence line at the end of the item's field section
+                # Find position after the Status line and before subsections
+                evidence_pos = status_line_index + 1
+                utc_iso = datetime.now(timezone.utc).isoformat()
+                output_lines.insert(evidence_pos, f"- Evidence: {evidence} ({utc_iso})")
+                continue
+            else:
+                output_lines.append(line)
+        else:
+            output_lines.append(line)
+        i += 1
+
+    if not found_item:
+        raise CwoChatError(f"item '{item_id}' heading not found in workgraph")
+
+    # Step 6: Write updated workgraph atomically
+    new_content = "\n".join(output_lines)
+    temp_path = workgraph_path.with_suffix(".tmp")
+    try:
+        temp_path.write_text(new_content, encoding="utf-8")
+        os.replace(temp_path, workgraph_path)
+    except Exception as e:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise CwoChatError(f"failed to write workgraph: {e}") from None
+
+    # Step 7: Render output
+    lines = [
+        "",
+        "## Item Status Updated",
+        "",
+        f"Item: {item_id}",
+        f"Old status: {old_status or 'not set'}",
+        f"New status: {status}",
+        f"Evidence recorded: {evidence}",
+        "",
+        f"## Workgraph",
+        "",
+        f"{workgraph_path.resolve()}",
+        "",
+    ]
+
+    if transport == "mcp":
+        lines.extend([
+            "## REQUIRED NEXT ACTION FOR YOU (the assistant)",
+            "",
+            "Call the cwo_continue tool NOW to get the next recommended item.",
+        ])
+    else:
+        lines.extend([
+            NEXT_DELIMITER,
+            "",
+            f'python3 "{Path(__file__).resolve()}" continue "{workgraph_path.resolve()}"',
+        ])
+
+    return "\n".join(lines)
 
 
 def run_start(goal: str, workspace: Path, transport: str = "cli") -> str:
@@ -798,6 +992,14 @@ def main() -> None:
     continue_parser.add_argument("--workspace", type=Path, default=Path.cwd(), help="Workspace path (default: cwd)")
     continue_parser.add_argument("--epic", default="epic", help="Epic ID (default: epic)")
 
+    # mark subcommand
+    mark_parser = subparsers.add_parser("mark", help="Mark a work item with status and evidence")
+    mark_parser.add_argument("item_id", help="Item ID to mark")
+    mark_parser.add_argument("status", help="New status (open, in-progress, closed, blocked)")
+    mark_parser.add_argument("--evidence", required=True, help="Evidence text describing the action")
+    mark_parser.add_argument("--workgraph", type=Path, default=None, help="Workgraph file path (default: discover newest)")
+    mark_parser.add_argument("--workspace", type=Path, default=Path.cwd(), help="Workspace path (default: cwd)")
+
     args = parser.parse_args()
 
     try:
@@ -809,6 +1011,9 @@ def main() -> None:
             print(output)
         elif args.command == "continue":
             output = run_continue(args.workgraph, args.workspace, args.epic)
+            print(output)
+        elif args.command == "mark":
+            output = run_mark(args.item_id, args.status, args.evidence, args.workspace, args.workgraph)
             print(output)
     except CwoChatError as e:
         sys.stderr.write(f"{e}\n")

@@ -14,6 +14,8 @@ CWO_CHAT = REPO_ROOT / "scripts" / "cwo_chat.py"
 # Add scripts directory to path for importing functions
 sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
+from cwo_chat import NEXT_DELIMITER
+
 
 def run_cwo_chat(*args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
@@ -523,7 +525,140 @@ class CwoChatTests(unittest.TestCase):
             self.assertIn("Other free-text field", output)
             # Should contain FINAL section with ask_user (v1.4.5)
             self.assertIn("REQUIRED NEXT ACTION FOR YOU", output)
-            self.assertIn("mcp: proceed with recommended item", output)
+            self.assertIn("mcp: work the recommended item now", output)
+
+    def test_run_mark_round_trip(self) -> None:
+        """Test run_mark updates item status and appends evidence."""
+        from cwo_chat import run_start, run_answer, run_mark, run_continue
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Start and answer to create workgraph
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Get workgraph path
+            workgraph_files = list((workspace / ".cwo").glob("workgraph-*.md"))
+            self.assertEqual(len(workgraph_files), 1)
+            workgraph_path = workgraph_files[0]
+
+            # Read to find an item id (should be "epic" at minimum)
+            content = workgraph_path.read_text()
+            self.assertIn("### epic:", content)
+
+            # Mark the epic item as closed
+            output = run_mark("epic", "closed", "coordination done", workspace, workgraph_path)
+            self.assertIsInstance(output, str)
+            self.assertIn("Item Status Updated", output)
+            self.assertIn("epic", output)
+            self.assertIn("closed", output)
+            self.assertIn("coordination done", output)
+
+            # Verify file was updated
+            updated_content = workgraph_path.read_text()
+            self.assertIn("- Status: closed", updated_content)
+            self.assertIn("- Evidence: coordination done", updated_content)
+
+            # Verify run_continue no longer recommends epic
+            output = run_continue(workgraph_path, workspace)
+            self.assertIsInstance(output, str)
+            # Epic should be closed, so shouldn't be in recommended/ready issues
+
+    def test_run_mark_invalid_item_id(self) -> None:
+        """Test run_mark raises CwoChatError for invalid item id."""
+        from cwo_chat import run_start, run_answer, run_mark, CwoChatError
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Start and answer to create workgraph
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Get workgraph path
+            workgraph_files = list((workspace / ".cwo").glob("workgraph-*.md"))
+            workgraph_path = workgraph_files[0]
+
+            # Try to mark nonexistent item
+            with self.assertRaises(CwoChatError) as ctx:
+                run_mark("nonexistent", "closed", "evidence", workspace, workgraph_path)
+
+            error_msg = str(ctx.exception)
+            self.assertIn("nonexistent", error_msg)
+            self.assertIn("not found", error_msg)
+            # Should list valid ids
+            self.assertIn("epic", error_msg)
+
+    def test_run_mark_invalid_status(self) -> None:
+        """Test run_mark raises CwoChatError for invalid status."""
+        from cwo_chat import run_start, run_answer, run_mark, CwoChatError
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Start and answer to create workgraph
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Get workgraph path
+            workgraph_files = list((workspace / ".cwo").glob("workgraph-*.md"))
+            workgraph_path = workgraph_files[0]
+
+            # Try to mark with invalid status
+            with self.assertRaises(CwoChatError) as ctx:
+                run_mark("epic", "invalid-status", "evidence", workspace, workgraph_path)
+
+            error_msg = str(ctx.exception)
+            self.assertIn("invalid status", error_msg)
+            self.assertIn("open", error_msg)
+            self.assertIn("closed", error_msg)
+
+    def test_run_mark_mcp_transport_tail(self) -> None:
+        """Test run_mark with MCP transport includes cwo_continue imperative."""
+        from cwo_chat import run_start, run_answer, run_mark
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Start and answer to create workgraph
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Get workgraph path
+            workgraph_files = list((workspace / ".cwo").glob("workgraph-*.md"))
+            workgraph_path = workgraph_files[0]
+
+            # Mark with MCP transport
+            output = run_mark("epic", "closed", "evidence", workspace, workgraph_path, transport="mcp")
+            self.assertIsInstance(output, str)
+            # MCP should have cwo_continue imperative
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", output)
+            self.assertIn("cwo_continue tool NOW", output)
+            # Should NOT have CLI command
+            self.assertNotIn(NEXT_DELIMITER, output)
+
+    def test_run_mark_cli_transport_tail(self) -> None:
+        """Test run_mark with CLI transport includes command tail."""
+        from cwo_chat import run_start, run_answer, run_mark
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Start and answer to create workgraph
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Get workgraph path
+            workgraph_files = list((workspace / ".cwo").glob("workgraph-*.md"))
+            workgraph_path = workgraph_files[0]
+
+            # Mark with CLI transport (default)
+            output = run_mark("epic", "closed", "evidence", workspace, workgraph_path, transport="cli")
+            self.assertIsInstance(output, str)
+            # CLI should have NEXT delimiter and command
+            self.assertIn(NEXT_DELIMITER, output)
+            self.assertIn("continue", output)
 
 
 if __name__ == "__main__":
