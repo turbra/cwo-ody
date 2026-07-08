@@ -369,7 +369,7 @@ class CwoChatTests(unittest.TestCase):
             self.assertEqual(len(workgraph_files), 1)
 
     def test_mcp_transport_includes_ask_user_guidance(self) -> None:
-        """Test that MCP transport includes ask_user guidance with mcp: prefix."""
+        """Test that MCP transport includes universal ask_user guidance with mcp: prefix."""
         from cwo_chat import run_start
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -378,12 +378,14 @@ class CwoChatTests(unittest.TestCase):
             # Test run_start with MCP transport
             output = run_start("test goal", workspace, transport="mcp")
             self.assertIsInstance(output, str)
-            # Should contain ask_user guidance
+            # Should contain universal ask_user guidance
+            self.assertIn("Whenever you present the user with choices", output)
             self.assertIn("ask_user", output)
             self.assertIn("mcp: ", output)
             # Should contain agent guidance section
             self.assertIn("Agent Guidance", output)
-            # Should mention the prefix requirement
+            # Should mention the Other field and prefix requirement
+            self.assertIn("Other free-text field", output)
             self.assertIn("'mcp: '", output)
 
     def test_cli_transport_excludes_ask_user_guidance(self) -> None:
@@ -422,6 +424,84 @@ class CwoChatTests(unittest.TestCase):
             if "Changed:" in output:
                 self.assertIn("ask_user", output)
                 self.assertIn("mcp: ", output)
+
+    def test_continue_missing_explicit_path_error_is_actionable(self) -> None:
+        """Test that continue with nonexistent explicit workgraph provides actionable recovery."""
+        from cwo_chat import run_start, run_answer, run_continue, CwoChatError
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Create a session and workgraph first (so newest exists)
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Get the newest workgraph path
+            workgraph_files = sorted((workspace / ".cwo").glob("workgraph-*.md"), key=lambda p: p.stat().st_mtime)
+            newest_workgraph = workgraph_files[-1].resolve()
+
+            # Try continue with nonexistent explicit path
+            with self.assertRaises(CwoChatError) as ctx:
+                run_continue(Path("/nonexistent/x.md"), workspace)
+
+            error_msg = str(ctx.exception)
+            # Error should mention the missing explicit path
+            self.assertIn("workgraph not found", error_msg)
+            self.assertIn("/nonexistent/x.md", error_msg)
+            # Error should provide actionable recovery: use no argument
+            self.assertIn("no workgraph argument", error_msg)
+            # Error should show the discovered newest path
+            self.assertIn(str(newest_workgraph), error_msg)
+
+    def test_answer_missing_explicit_session_error_is_actionable(self) -> None:
+        """Test that answer with nonexistent explicit session provides actionable recovery."""
+        from cwo_chat import run_start, run_answer, CwoChatError
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Create a session first (so newest exists)
+            run_start("test goal", workspace)
+
+            # Get the newest session path
+            session_files = sorted((workspace / ".cwo").glob("session-*.json"), key=lambda p: p.stat().st_mtime)
+            newest_session = session_files[-1].resolve()
+
+            # Try answer with nonexistent explicit path
+            with self.assertRaises(CwoChatError) as ctx:
+                run_answer("defaults", Path("/nonexistent/session.json"), workspace)
+
+            error_msg = str(ctx.exception)
+            # Error should mention the missing explicit path
+            self.assertIn("session not found", error_msg)
+            self.assertIn("/nonexistent/session.json", error_msg)
+            # Error should provide actionable recovery: omit the argument
+            self.assertIn("Omit the session argument", error_msg)
+            # Error should show the discovered newest path
+            self.assertIn(str(newest_session), error_msg)
+
+    def test_mcp_continue_includes_universal_guidance(self) -> None:
+        """Test that MCP transport continue includes universal ask_user guidance."""
+        from cwo_chat import run_start, run_answer, run_continue
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Create session and workgraph
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Run continue with MCP transport
+            output = run_continue(None, workspace, transport="mcp")
+            self.assertIsInstance(output, str)
+            # Should contain universal guidance
+            self.assertIn("Whenever you present the user with choices", output)
+            self.assertIn("ask_user", output)
+            self.assertIn("mcp: ", output)
+            # Should contain Agent Guidance section
+            self.assertIn("Agent Guidance", output)
+            # Should mention the Other field
+            self.assertIn("Other free-text field", output)
 
 
 if __name__ == "__main__":

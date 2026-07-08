@@ -77,10 +77,12 @@ class CwoMcpServerTests(unittest.TestCase):
             # Check for MCP transport wording (not CLI wording)
             self.assertIn("plan is ready", result)
             self.assertNotIn("python3", result)
-            # Check for ask_user guidance with mcp: prefix (v1.4.2)
+            # Check for universal ask_user guidance with mcp: prefix (v1.4.3)
+            self.assertIn("Whenever you present the user with choices", result)
             self.assertIn("ask_user", result)
             self.assertIn("mcp: ", result)
             self.assertIn("Agent Guidance", result)
+            self.assertIn("Other free-text field", result)
             # Workgraph should be created
             cwo_dir = Path(tmpdir) / ".cwo"
             workgraph_files = sorted(cwo_dir.glob("workgraph-*.md"), key=lambda p: p.stat().st_mtime)

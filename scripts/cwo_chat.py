@@ -310,7 +310,7 @@ def render_start_post(result: dict, session: dict, workgraph_path: Path, applied
     # Add agent guidance for clickable options (MCP only)
     if transport == "mcp":
         lines.extend(["", "## Agent Guidance", ""])
-        lines.append("After relaying this plan, present the adjustable levers to the user as clickable options with your ask_user tool. Prefix EVERY option label with 'mcp: ' (this host requires it to route selections back to tools), e.g.: 'mcp: accept defaults', 'mcp: tight graph', 'mcp: no subagents', 'mcp: heavy context'. When a selection arrives, call the cwo_answer tool with it.")
+        lines.append("Whenever you present the user with choices or ask whether to proceed, use your ask_user tool: 2-6 options, EVERY label prefixed 'mcp: ' (this host requires it; an Other free-text field is added automatically). When a selection arrives, act on it (adjustments -> cwo_answer; next item -> cwo_continue; work -> do it). For this plan, example option labels: 'mcp: accept defaults', 'mcp: tight graph', 'mcp: no subagents', 'mcp: heavy context'.")
 
     # Add work-item execution guidance for mcp transport
     if transport == "mcp":
@@ -354,7 +354,7 @@ def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str]
         lines.append("")
         # Add agent guidance for further adjustments (MCP only)
         if transport == "mcp":
-            lines.append("You may again offer adjustments via ask_user with 'mcp: '-prefixed labels, or proceed to work the items.")
+            lines.append("You may offer further adjustments via ask_user (2-6 options, every label prefixed 'mcp: '), or proceed to work the items.")
             lines.append("")
 
     lines.extend(["## Chosen Options", ""])
@@ -453,6 +453,11 @@ def render_continue_post(continuation_brief: dict, transport: str = "cli") -> st
         lines.extend(["", "## Warnings", ""])
         for warning in warnings:
             lines.append(f"- {warning}")
+
+    # Add agent guidance for user choices (MCP only)
+    if transport == "mcp":
+        lines.extend(["", "## Agent Guidance", ""])
+        lines.append("Whenever you present the user with choices or ask whether to proceed, use your ask_user tool: 2-6 options, EVERY label prefixed 'mcp: ' (this host requires it; an Other free-text field is added automatically). When a selection arrives, act on it.")
 
     # Add work-item execution guidance and typing tip for mcp transport
     if transport == "mcp":
@@ -584,6 +589,19 @@ def run_answer(reply: str, session_path: Path | None, workspace: Path, transport
         session_path = discover_newest_session(workspace)
     else:
         session_path = Path(session_path).resolve()
+        # Validate explicitly provided session exists
+        if not session_path.exists():
+            # Try to discover newest as fallback for error message
+            newest_path = None
+            try:
+                newest_path = discover_newest_session(workspace)
+            except CwoChatError:
+                pass  # No session at all, just report the missing explicit one
+
+            if newest_path:
+                raise CwoChatError(f"session not found: {session_path}. Omit the session argument to use the newest session (newest: {newest_path.resolve()})")
+            else:
+                raise CwoChatError(f"session not found: {session_path}. Omit the session argument to use the newest session")
 
     # Step 2: Load session
     session = load_session(session_path)
@@ -659,10 +677,19 @@ def run_continue(workgraph_path: Path | None, workspace: Path, epic: str = "epic
         workgraph_path = discover_newest_workgraph(workspace)
     else:
         workgraph_path = Path(workgraph_path).resolve()
+        # Step 2: Validate explicitly provided workgraph exists
+        if not workgraph_path.exists():
+            # Try to discover newest as fallback for error message
+            newest_path = None
+            try:
+                newest_path = discover_newest_workgraph(workspace)
+            except CwoChatError:
+                pass  # No workgraph at all, just report the missing explicit one
 
-    # Step 2: Validate workgraph exists
-    if not workgraph_path.exists():
-        raise CwoChatError(f"Workgraph file not found: {workgraph_path}")
+            if newest_path:
+                raise CwoChatError(f"workgraph not found: {workgraph_path}. Call cwo_continue with no workgraph argument to use the newest workgraph automatically (newest: {newest_path.resolve()})")
+            else:
+                raise CwoChatError(f"workgraph not found: {workgraph_path}. Call cwo_continue with no workgraph argument to use the newest workgraph automatically")
 
     # Step 3: Load and process
     raw_items = load_markdown_items(workgraph_path, epic)
