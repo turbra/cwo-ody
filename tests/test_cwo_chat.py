@@ -368,6 +368,61 @@ class CwoChatTests(unittest.TestCase):
             workgraph_files = list((Path(tmpdir) / ".cwo").glob("workgraph-*.md"))
             self.assertEqual(len(workgraph_files), 1)
 
+    def test_mcp_transport_includes_ask_user_guidance(self) -> None:
+        """Test that MCP transport includes ask_user guidance with mcp: prefix."""
+        from cwo_chat import run_start
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Test run_start with MCP transport
+            output = run_start("test goal", workspace, transport="mcp")
+            self.assertIsInstance(output, str)
+            # Should contain ask_user guidance
+            self.assertIn("ask_user", output)
+            self.assertIn("mcp: ", output)
+            # Should contain agent guidance section
+            self.assertIn("Agent Guidance", output)
+            # Should mention the prefix requirement
+            self.assertIn("'mcp: '", output)
+
+    def test_cli_transport_excludes_ask_user_guidance(self) -> None:
+        """Test that CLI transport does NOT include ask_user guidance."""
+        from cwo_chat import run_start
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Test run_start with CLI transport (default)
+            output = run_start("test goal", workspace, transport="cli")
+            self.assertIsInstance(output, str)
+            # Should NOT contain ask_user guidance (CLI doesn't use it)
+            self.assertNotIn("ask_user", output)
+            # Should NOT contain agent guidance section (CLI doesn't need it)
+            self.assertNotIn("Agent Guidance", output)
+
+    def test_mcp_answer_includes_ask_user_guidance_after_changes(self) -> None:
+        """Test that MCP transport answer includes ask_user guidance after changes."""
+        from cwo_chat import run_start, run_answer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Create session
+            run_start("test goal", workspace)
+
+            # Get session path
+            session_files = list((workspace / ".cwo").glob("session-*.json"))
+            session_path = session_files[0]
+
+            # Run answer with MCP transport and changes
+            output = run_answer("tight graph", session_path, workspace, transport="mcp")
+            self.assertIsInstance(output, str)
+            # If changes were made, should offer further adjustments
+            if "Changed:" in output:
+                self.assertIn("ask_user", output)
+                self.assertIn("mcp: ", output)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -307,6 +307,11 @@ def render_start_post(result: dict, session: dict, workgraph_path: Path, applied
             alts_str = ", ".join(alternatives)
             lines.append(f"- {label}: {current} (alternatives: {alts_str})")
 
+    # Add agent guidance for clickable options (MCP only)
+    if transport == "mcp":
+        lines.extend(["", "## Agent Guidance", ""])
+        lines.append("After relaying this plan, present the adjustable levers to the user as clickable options with your ask_user tool. Prefix EVERY option label with 'mcp: ' (this host requires it to route selections back to tools), e.g.: 'mcp: accept defaults', 'mcp: tight graph', 'mcp: no subagents', 'mcp: heavy context'. When a selection arrives, call the cwo_answer tool with it.")
+
     # Add work-item execution guidance for mcp transport
     if transport == "mcp":
         lines.extend(["", "## Work Item Execution", ""])
@@ -330,7 +335,7 @@ def render_start_next(transport: str = "cli") -> str:
     ])
 
 
-def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str], workgraph_path: Path, changed_levers: list[str] | None = None) -> str:
+def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str], workgraph_path: Path, changed_levers: list[str] | None = None, transport: str = "cli") -> str:
     """Render the POST block for the answer command."""
     lines = [
         POST_DELIMITER,
@@ -347,6 +352,10 @@ def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str]
         for lever in changed_levers:
             lines.append(f"- {lever}")
         lines.append("")
+        # Add agent guidance for further adjustments (MCP only)
+        if transport == "mcp":
+            lines.append("You may again offer adjustments via ask_user with 'mcp: '-prefixed labels, or proceed to work the items.")
+            lines.append("")
 
     lines.extend(["## Chosen Options", ""])
 
@@ -445,10 +454,12 @@ def render_continue_post(continuation_brief: dict, transport: str = "cli") -> st
         for warning in warnings:
             lines.append(f"- {warning}")
 
-    # Add work-item execution guidance for mcp transport
+    # Add work-item execution guidance and typing tip for mcp transport
     if transport == "mcp":
         lines.extend(["", "## Work Item Execution", ""])
         lines.append("Work items are executed by YOU (the agent): do the item's work, then edit its Status line in the workgraph file, then call cwo_continue for the next item.")
+        lines.append("")
+        lines.append("Tip for the user: start typed follow-ups with 'mcp:' so this host routes them to tools.")
 
     return "\n".join(lines)
 
@@ -629,7 +640,7 @@ def run_answer(reply: str, session_path: Path | None, workspace: Path, transport
     save_session(session_path, session)
 
     # Step 9: Render output
-    post = render_answer_post(session, flags, used_defaults, workgraph_path, changed_levers if changed_levers else None)
+    post = render_answer_post(session, flags, used_defaults, workgraph_path, changed_levers if changed_levers else None, transport)
     next_cmd = render_answer_next(transport)
 
     return f"{post}\n\n{next_cmd}"

@@ -58,13 +58,14 @@ should track the workgraph path from the prior cwo_answer call and pass it
 1. User: "Plan a large refactor." (on gated hosts, say "plan (mcp)" to trigger MCP)
 2. Model calls `cwo_start` with the user's goal.
 3. Model relays the complete plan + workgraph file path to the user (done in one turn with defaults applied).
-4. **Optional:** User: "Use a tight graph instead." or other adjustment request.
-5. **Optional:** Model calls `cwo_answer` with the mapped adjustment flags.
-6. **Optional:** Model relays the updated plan to the user.
-7. User: "Start on item A1."
-8. User: "Continue the sprint." (later, in same or fresh chat)
-9. Model calls `cwo_continue` (auto-discovers workgraph from workspace).
-10. Model relays the next recommended item.
+4. Model presents adjustable levers as clickable options via `ask_user`, with labels prefixed "mcp: " (e.g., "mcp: tight graph", "mcp: heavy context"). The Odysseus host's keyword gate ("mcp" passes; others are blocked) requires this prefix so that user clicks route back to tools.
+5. **Optional:** User clicks an option or types "mcp: <adjustment>" to adjust orchestration.
+6. **Optional:** Model calls `cwo_answer` with the mapped adjustment flags.
+7. **Optional:** Model relays the updated plan to the user.
+8. User: "Start on item A1."
+9. User: "Continue the sprint." (later, in same or fresh chat)
+10. Model calls `cwo_continue` (auto-discovers workgraph from workspace).
+11. Model relays the next recommended item.
 
 ## Troubleshooting
 

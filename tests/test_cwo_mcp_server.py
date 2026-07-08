@@ -77,6 +77,10 @@ class CwoMcpServerTests(unittest.TestCase):
             # Check for MCP transport wording (not CLI wording)
             self.assertIn("plan is ready", result)
             self.assertNotIn("python3", result)
+            # Check for ask_user guidance with mcp: prefix (v1.4.2)
+            self.assertIn("ask_user", result)
+            self.assertIn("mcp: ", result)
+            self.assertIn("Agent Guidance", result)
             # Workgraph should be created
             cwo_dir = Path(tmpdir) / ".cwo"
             workgraph_files = sorted(cwo_dir.glob("workgraph-*.md"), key=lambda p: p.stat().st_mtime)
@@ -109,6 +113,8 @@ class CwoMcpServerTests(unittest.TestCase):
                 result = mod.handle_tool("cwo_continue", {"workgraph": workgraph_path})
             self.assertNotIn("error", result)
             self.assertIn("Recommended", result)
+            # Check for mcp: tip in continue (v1.4.2)
+            self.assertIn("mcp:", result)
 
     def test_handle_tool_ignores_workspace_argument(self) -> None:
         """Test that handle_tool ignores workspace argument and uses CWO_WORKSPACE env."""
