@@ -267,13 +267,18 @@ def get_alternative_values(question_id: str) -> list[str]:
 
 def render_start_post(result: dict, session: dict, workgraph_path: Path, applied_flags: dict, transport: str = "cli") -> str:
     """Render the POST block for the start command with applied defaults and workgraph."""
-    lines = [
-        POST_DELIMITER,
-        "",
+    lines = []
+
+    # Only add delimiter for CLI transport
+    if transport == "cli":
+        lines.append(POST_DELIMITER)
+        lines.append("")
+
+    lines.extend([
         "## Orchestration Options",
         "",
         f"Recommended orchestration level: {result.get('recommended_orchestration_level')}",
-    ]
+    ])
 
     route = result.get("route", {})
     if isinstance(route, dict):
@@ -317,17 +322,31 @@ def render_start_post(result: dict, session: dict, workgraph_path: Path, applied
         lines.extend(["", "## Work Item Execution", ""])
         lines.append("Work items are executed by YOU (the agent): do the item's work, then edit its Status line in the workgraph file, then call cwo_continue for the next item.")
 
+        # Add FINAL section with ask_user imperative for MCP
+        lines.extend(["", "## REQUIRED NEXT ACTION FOR YOU (the assistant)", ""])
+        lines.append("Call your ask_user tool NOW with exactly this shape (adjust option labels to the levers above; keep the 'mcp: ' prefix on EVERY label; do NOT print options as plain text):")
+        lines.append("")
+        ask_user_json = {
+            "question": "Apply adjustments, or proceed with this plan?",
+            "options": [
+                {"label": "mcp: accept defaults & proceed"},
+                {"label": "mcp: tight graph"},
+                {"label": "mcp: heavy context"},
+                {"label": "mcp: no subagents"}
+            ]
+        }
+        lines.append(json.dumps(ask_user_json, indent=2))
+        lines.append("")
+        lines.append("When the selection arrives: adjustments -> call cwo_answer with it; proceed -> work the first item (see Work Item Execution above).")
+
     return "\n".join(lines)
 
 
 def render_start_next(transport: str = "cli") -> str:
     """Render the NEXT block for the start command."""
     if transport == "mcp":
-        return "\n".join([
-            NEXT_DELIMITER,
-            "",
-            "(none — plan is ready. Adjust via cwo_answer, or resume later via cwo_continue.)",
-        ])
+        # MCP: no NEXT block needed, all guidance is in FINAL section
+        return ""
     return "\n".join([
         NEXT_DELIMITER,
         "",
@@ -337,14 +356,19 @@ def render_start_next(transport: str = "cli") -> str:
 
 def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str], workgraph_path: Path, changed_levers: list[str] | None = None, transport: str = "cli") -> str:
     """Render the POST block for the answer command."""
-    lines = [
-        POST_DELIMITER,
-        "",
+    lines = []
+
+    # Only add delimiter for CLI transport
+    if transport == "cli":
+        lines.append(POST_DELIMITER)
+        lines.append("")
+
+    lines.extend([
         "## Configuration Complete",
         "",
         f"Goal: {session.get('goal')}",
         "",
-    ]
+    ])
 
     # Show changed levers if any
     if changed_levers:
@@ -393,17 +417,36 @@ def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str]
         title = match.group(2).strip()
         lines.append(f"- {item_id}: {title}")
 
+    # Add work-item execution guidance for MCP transport
+    if transport == "mcp":
+        lines.extend(["", "## Work Item Execution", ""])
+        lines.append("Work items are executed by YOU (the agent): do the item's work, then edit its Status line in the workgraph file, then call cwo_continue for the next item.")
+
+        # Add FINAL section with ask_user imperative for MCP
+        lines.extend(["", "## REQUIRED NEXT ACTION FOR YOU (the assistant)", ""])
+        lines.append("Call your ask_user tool NOW with exactly this shape (adjust option labels as needed; keep the 'mcp: ' prefix on EVERY label; do NOT print options as plain text):")
+        lines.append("")
+        ask_user_json = {
+            "question": "Apply further adjustments, or proceed with this plan?",
+            "options": [
+                {"label": "mcp: accept current settings & proceed"},
+                {"label": "mcp: tight graph"},
+                {"label": "mcp: heavy context"},
+                {"label": "mcp: no subagents"}
+            ]
+        }
+        lines.append(json.dumps(ask_user_json, indent=2))
+        lines.append("")
+        lines.append("When the selection arrives: further adjustments -> call cwo_answer with it; proceed -> work the first item (see Work Item Execution above).")
+
     return "\n".join(lines)
 
 
 def render_answer_next(transport: str = "cli") -> str:
     """Render the NEXT block for the answer command."""
     if transport == "mcp":
-        return "\n".join([
-            NEXT_DELIMITER,
-            "",
-            "(none — session complete. To resume later call the cwo_continue tool.)",
-        ])
+        # MCP: no NEXT block needed, all guidance is in FINAL section
+        return ""
     return "\n".join([
         NEXT_DELIMITER,
         "",
@@ -413,9 +456,14 @@ def render_answer_next(transport: str = "cli") -> str:
 
 def render_continue_post(continuation_brief: dict, transport: str = "cli") -> str:
     """Render the POST block for the continue command."""
-    lines = [
-        POST_DELIMITER,
-        "",
+    lines = []
+
+    # Only add delimiter for CLI transport
+    if transport == "cli":
+        lines.append(POST_DELIMITER)
+        lines.append("")
+
+    lines.extend([
         "## Sprint Continuation",
         "",
         f"Epic: {continuation_brief.get('epic_id')}",
@@ -423,7 +471,7 @@ def render_continue_post(continuation_brief: dict, transport: str = "cli") -> st
         "",
         "## Recommended Next Issue",
         "",
-    ]
+    ])
 
     recommended = continuation_brief.get("recommended_next_issue")
     if recommended:
@@ -466,17 +514,30 @@ def render_continue_post(continuation_brief: dict, transport: str = "cli") -> st
         lines.append("")
         lines.append("Tip for the user: start typed follow-ups with 'mcp:' so this host routes them to tools.")
 
+        # Add FINAL section with ask_user imperative for MCP
+        lines.extend(["", "## REQUIRED NEXT ACTION FOR YOU (the assistant)", ""])
+        lines.append("Call your ask_user tool NOW with exactly this shape (adjust option labels as needed; keep the 'mcp: ' prefix on EVERY label; do NOT print options as plain text):")
+        lines.append("")
+        ask_user_json = {
+            "question": "Proceed with recommended item, show blocked details, or adjust plan?",
+            "options": [
+                {"label": "mcp: proceed with recommended item"},
+                {"label": "mcp: show blocked details"},
+                {"label": "mcp: adjust plan"}
+            ]
+        }
+        lines.append(json.dumps(ask_user_json, indent=2))
+        lines.append("")
+        lines.append("When the selection arrives: proceed -> work the recommended item; show details -> relay blockers info; adjust -> call cwo_answer.")
+
     return "\n".join(lines)
 
 
 def render_continue_next(workgraph_path: Path, transport: str = "cli") -> str:
     """Render the NEXT block for the continue command."""
     if transport == "mcp":
-        return "\n".join([
-            NEXT_DELIMITER,
-            "",
-            "(none — work the recommended item, update its Status in workgraph, then call cwo_continue again)",
-        ])
+        # MCP: no NEXT block needed, all guidance is in FINAL section
+        return ""
     abs_path = str(workgraph_path.resolve())
     return "\n".join([
         NEXT_DELIMITER,
@@ -573,7 +634,11 @@ def run_start(goal: str, workspace: Path, transport: str = "cli") -> str:
     post = render_start_post(result, session, workgraph_path, applied_flags, transport)
     next_cmd = render_start_next(transport)
 
-    return f"{post}\n\n{next_cmd}"
+    # For MCP, next_cmd is empty, so just return post
+    if next_cmd:
+        return f"{post}\n\n{next_cmd}"
+    else:
+        return post
 
 
 def run_answer(reply: str, session_path: Path | None, workspace: Path, transport: str = "cli") -> str:
@@ -661,7 +726,11 @@ def run_answer(reply: str, session_path: Path | None, workspace: Path, transport
     post = render_answer_post(session, flags, used_defaults, workgraph_path, changed_levers if changed_levers else None, transport)
     next_cmd = render_answer_next(transport)
 
-    return f"{post}\n\n{next_cmd}"
+    # For MCP, next_cmd is empty, so just return post
+    if next_cmd:
+        return f"{post}\n\n{next_cmd}"
+    else:
+        return post
 
 
 def run_continue(workgraph_path: Path | None, workspace: Path, epic: str = "epic", transport: str = "cli") -> str:
@@ -701,7 +770,11 @@ def run_continue(workgraph_path: Path | None, workspace: Path, epic: str = "epic
     post = render_continue_post(continuation_brief, transport)
     next_cmd = render_continue_next(workgraph_path, transport)
 
-    return f"{post}\n\n{next_cmd}"
+    # For MCP, next_cmd is empty, so just return post
+    if next_cmd:
+        return f"{post}\n\n{next_cmd}"
+    else:
+        return post
 
 
 def main() -> None:

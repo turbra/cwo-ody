@@ -378,6 +378,9 @@ class CwoChatTests(unittest.TestCase):
             # Test run_start with MCP transport
             output = run_start("test goal", workspace, transport="mcp")
             self.assertIsInstance(output, str)
+            # MCP transport should NOT include delimiters (v1.4.5)
+            self.assertNotIn("===== POST THIS MESSAGE TO THE USER =====", output)
+            self.assertNotIn("===== NEXT COMMAND", output)
             # Should contain universal ask_user guidance
             self.assertIn("Whenever you present the user with choices", output)
             self.assertIn("ask_user", output)
@@ -387,9 +390,15 @@ class CwoChatTests(unittest.TestCase):
             # Should mention the Other field and prefix requirement
             self.assertIn("Other free-text field", output)
             self.assertIn("'mcp: '", output)
+            # Should contain FINAL section with ask_user imperative (v1.4.5)
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", output)
+            # Should contain JSON shape with mcp: labels
+            self.assertIn('"question":', output)
+            self.assertIn('"options":', output)
+            self.assertIn("mcp: accept defaults & proceed", output)
 
     def test_cli_transport_excludes_ask_user_guidance(self) -> None:
-        """Test that CLI transport does NOT include ask_user guidance."""
+        """Test that CLI transport does NOT include ask_user guidance but has delimiters."""
         from cwo_chat import run_start
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -398,10 +407,15 @@ class CwoChatTests(unittest.TestCase):
             # Test run_start with CLI transport (default)
             output = run_start("test goal", workspace, transport="cli")
             self.assertIsInstance(output, str)
+            # CLI should have delimiters
+            self.assertIn("===== POST THIS MESSAGE TO THE USER =====", output)
+            self.assertIn("===== NEXT COMMAND", output)
             # Should NOT contain ask_user guidance (CLI doesn't use it)
             self.assertNotIn("ask_user", output)
             # Should NOT contain agent guidance section (CLI doesn't need it)
             self.assertNotIn("Agent Guidance", output)
+            # Should NOT contain FINAL section (CLI doesn't need it)
+            self.assertNotIn("REQUIRED NEXT ACTION FOR YOU", output)
 
     def test_mcp_answer_includes_ask_user_guidance_after_changes(self) -> None:
         """Test that MCP transport answer includes ask_user guidance after changes."""
@@ -420,10 +434,12 @@ class CwoChatTests(unittest.TestCase):
             # Run answer with MCP transport and changes
             output = run_answer("tight graph", session_path, workspace, transport="mcp")
             self.assertIsInstance(output, str)
-            # If changes were made, should offer further adjustments
-            if "Changed:" in output:
-                self.assertIn("ask_user", output)
-                self.assertIn("mcp: ", output)
+            # MCP transport should NOT include delimiters (v1.4.5)
+            self.assertNotIn("===== POST THIS MESSAGE TO THE USER =====", output)
+            self.assertNotIn("===== NEXT COMMAND", output)
+            # Should contain FINAL section with ask_user (v1.4.5)
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", output)
+            self.assertIn("mcp: ", output)
 
     def test_continue_missing_explicit_path_error_is_actionable(self) -> None:
         """Test that continue with nonexistent explicit workgraph provides actionable recovery."""
@@ -494,6 +510,9 @@ class CwoChatTests(unittest.TestCase):
             # Run continue with MCP transport
             output = run_continue(None, workspace, transport="mcp")
             self.assertIsInstance(output, str)
+            # MCP transport should NOT include delimiters (v1.4.5)
+            self.assertNotIn("===== POST THIS MESSAGE TO THE USER =====", output)
+            self.assertNotIn("===== NEXT COMMAND", output)
             # Should contain universal guidance
             self.assertIn("Whenever you present the user with choices", output)
             self.assertIn("ask_user", output)
@@ -502,6 +521,9 @@ class CwoChatTests(unittest.TestCase):
             self.assertIn("Agent Guidance", output)
             # Should mention the Other field
             self.assertIn("Other free-text field", output)
+            # Should contain FINAL section with ask_user (v1.4.5)
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", output)
+            self.assertIn("mcp: proceed with recommended item", output)
 
 
 if __name__ == "__main__":

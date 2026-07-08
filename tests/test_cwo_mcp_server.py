@@ -68,14 +68,14 @@ class CwoMcpServerTests(unittest.TestCase):
             with mock.patch.dict(os.environ, {"CWO_WORKSPACE": tmpdir}):
                 result = mod.handle_tool("cwo_start", {"goal": "test goal"})
             self.assertNotIn("error", result)
-            self.assertIn("POST THIS MESSAGE TO THE USER", result)
-            self.assertIn("===== NEXT COMMAND (run after the user replies) =====", result)
+            # For MCP transport, no POST/NEXT delimiters (v1.4.5)
+            self.assertNotIn("POST THIS MESSAGE TO THE USER", result)
+            self.assertNotIn("===== NEXT COMMAND (run after the user replies) =====", result)
             # Check for default-first content
             self.assertIn("Applied Defaults", result)
             self.assertIn("Workgraph", result)
             self.assertIn("Adjustable Levers", result)
             # Check for MCP transport wording (not CLI wording)
-            self.assertIn("plan is ready", result)
             self.assertNotIn("python3", result)
             # Check for universal ask_user guidance with mcp: prefix (v1.4.3)
             self.assertIn("Whenever you present the user with choices", result)
@@ -83,6 +83,12 @@ class CwoMcpServerTests(unittest.TestCase):
             self.assertIn("mcp: ", result)
             self.assertIn("Agent Guidance", result)
             self.assertIn("Other free-text field", result)
+            # Check for FINAL section with ask_user imperative (v1.4.5)
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", result)
+            # Verify JSON shape is in output with mcp: labels
+            self.assertIn('"question":', result)
+            self.assertIn('"options":', result)
+            self.assertIn("mcp: accept defaults & proceed", result)
             # Workgraph should be created
             cwo_dir = Path(tmpdir) / ".cwo"
             workgraph_files = sorted(cwo_dir.glob("workgraph-*.md"), key=lambda p: p.stat().st_mtime)
@@ -102,9 +108,10 @@ class CwoMcpServerTests(unittest.TestCase):
             self.assertIn("Configuration Complete", result)
             # Check workgraph path is in result
             self.assertIn(".md", result)
-            # Check for MCP transport wording
-            self.assertIn("===== NEXT COMMAND (run after the user replies) =====", result)
-            self.assertIn("session complete", result)
+            # For MCP transport, no NEXT delimiter (v1.4.5)
+            self.assertNotIn("===== NEXT COMMAND (run after the user replies) =====", result)
+            # Check for FINAL section with ask_user (v1.4.5)
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", result)
 
             # Continue
             workgraph_files = sorted(cwo_dir.glob("workgraph-*.md"), key=lambda p: p.stat().st_mtime)
@@ -117,6 +124,9 @@ class CwoMcpServerTests(unittest.TestCase):
             self.assertIn("Recommended", result)
             # Check for mcp: tip in continue (v1.4.2)
             self.assertIn("mcp:", result)
+            # Check for FINAL section with ask_user (v1.4.5)
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", result)
+            self.assertIn("mcp: proceed with recommended item", result)
 
     def test_handle_tool_ignores_workspace_argument(self) -> None:
         """Test that handle_tool ignores workspace argument and uses CWO_WORKSPACE env."""
@@ -136,7 +146,9 @@ class CwoMcpServerTests(unittest.TestCase):
                     )
                 # Workspace argument should be ignored
                 self.assertNotIn("error", result)
-                self.assertIn("POST THIS MESSAGE TO THE USER", result)
+                # For MCP transport, no POST delimiter (v1.4.5)
+                self.assertNotIn("POST THIS MESSAGE TO THE USER", result)
+                self.assertIn("Orchestration Options", result)
 
                 # Verify session/workgraph files are created under tmpdir_a, not tmpdir_b
                 cwo_dir_a = Path(tmpdir_a) / ".cwo"
