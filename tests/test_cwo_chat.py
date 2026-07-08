@@ -660,6 +660,166 @@ class CwoChatTests(unittest.TestCase):
             self.assertIn(NEXT_DELIMITER, output)
             self.assertIn("continue", output)
 
+    def test_mcp_start_question_contains_embedded_data(self) -> None:
+        """Test that MCP start ask_user question embeds plan data (v1.5.1)."""
+        from cwo_chat import run_start
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+            goal = "test goal for embedded data"
+
+            # Run start with MCP transport
+            output = run_start(goal, workspace, transport="mcp")
+
+            # Extract JSON from the REQUIRED NEXT ACTION section
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", output)
+            self.assertIn('"question":', output)
+
+            # Find and parse the JSON object
+            json_start = output.find("{")
+            json_end = output.rfind("}") + 1
+            self.assertGreater(json_start, 0)
+            self.assertGreater(json_end, json_start)
+
+            json_text = output[json_start:json_end]
+            ask_user_json = json.loads(json_text)
+
+            # Verify question field exists
+            self.assertIn("question", ask_user_json)
+            question_text = ask_user_json["question"]
+
+            # Verify embedded data is in question (v1.5.1)
+            self.assertIn("Plan ready:", question_text)
+            self.assertIn("Route:", question_text)
+            self.assertIn("Risk:", question_text)
+            self.assertIn("Sensitivity:", question_text)
+            self.assertIn("Workgraph:", question_text)
+            self.assertIn("Defaults:", question_text)
+
+            # Verify all options have mcp: prefix
+            for option in ask_user_json.get("options", []):
+                label = option.get("label", "")
+                self.assertTrue(label.startswith("mcp: "), f"Option label must start with 'mcp: ', got: {label}")
+
+    def test_mcp_answer_question_contains_embedded_data(self) -> None:
+        """Test that MCP answer ask_user question embeds updated config data (v1.5.1)."""
+        from cwo_chat import run_start, run_answer
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Start
+            run_start("test goal", workspace)
+
+            # Get session path
+            session_files = list((workspace / ".cwo").glob("session-*.json"))
+            session_path = session_files[0]
+
+            # Answer with changes
+            output = run_answer("tight graph, heavy context", session_path, workspace, transport="mcp")
+
+            # Extract JSON
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", output)
+            json_start = output.find("{")
+            json_end = output.rfind("}") + 1
+            json_text = output[json_start:json_end]
+            ask_user_json = json.loads(json_text)
+
+            # Verify question contains embedded data (v1.5.1)
+            question_text = ask_user_json["question"]
+            self.assertIn("Updated:", question_text)
+            self.assertIn("Current:", question_text)
+            self.assertIn("Workgraph:", question_text)
+
+            # Verify all options have mcp: prefix
+            for option in ask_user_json.get("options", []):
+                label = option.get("label", "")
+                self.assertTrue(label.startswith("mcp: "), f"Option label must start with 'mcp: ', got: {label}")
+
+    def test_mcp_continue_question_contains_embedded_data(self) -> None:
+        """Test that MCP continue ask_user question embeds recommended item data (v1.5.1)."""
+        from cwo_chat import run_start, run_answer, run_continue
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Start and answer
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Continue with MCP transport
+            output = run_continue(None, workspace, transport="mcp")
+
+            # Extract JSON
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", output)
+            json_start = output.find("{")
+            json_end = output.rfind("}") + 1
+            json_text = output[json_start:json_end]
+            ask_user_json = json.loads(json_text)
+
+            # Verify question contains embedded data (v1.5.1)
+            question_text = ask_user_json["question"]
+            self.assertIn("Next:", question_text)
+            self.assertIn("Ready:", question_text)
+            self.assertIn("Blocked:", question_text)
+            self.assertIn("Workgraph:", question_text)
+
+            # Verify all options have mcp: prefix
+            for option in ask_user_json.get("options", []):
+                label = option.get("label", "")
+                self.assertTrue(label.startswith("mcp: "), f"Option label must start with 'mcp: ', got: {label}")
+
+    def test_mcp_mark_question_contains_embedded_data(self) -> None:
+        """Test that MCP mark ask_user question embeds status and item count (v1.5.1)."""
+        from cwo_chat import run_start, run_answer, run_mark
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Start and answer
+            run_start("test goal", workspace)
+            run_answer("defaults", None, workspace)
+
+            # Get workgraph
+            workgraph_files = list((workspace / ".cwo").glob("workgraph-*.md"))
+            workgraph_path = workgraph_files[0]
+
+            # Mark with MCP transport
+            output = run_mark("epic", "closed", "test evidence", workspace, workgraph_path, transport="mcp")
+
+            # Extract JSON
+            self.assertIn("REQUIRED NEXT ACTION FOR YOU", output)
+            json_start = output.find("{")
+            json_end = output.rfind("}") + 1
+            json_text = output[json_start:json_end]
+            ask_user_json = json.loads(json_text)
+
+            # Verify question contains embedded data (v1.5.1)
+            question_text = ask_user_json["question"]
+            self.assertIn("Marked", question_text)
+            self.assertIn("epic", question_text)
+            self.assertIn("closed", question_text)
+            self.assertIn("item(s) open", question_text)
+
+            # Verify all options have mcp: prefix
+            for option in ask_user_json.get("options", []):
+                label = option.get("label", "")
+                self.assertTrue(label.startswith("mcp: "), f"Option label must start with 'mcp: ', got: {label}")
+
+    def test_mcp_embedded_data_question_not_shortened(self) -> None:
+        """Test that embedded question data instruction says 'do not shorten it' (v1.5.1)."""
+        from cwo_chat import run_start
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+
+            # Run start with MCP transport
+            output = run_start("test goal", workspace, transport="mcp")
+
+            # Check for the instruction about not shortening the question
+            self.assertIn("The question text above already contains the full context", output)
+            self.assertIn("do not shorten it", output)
+
 
 if __name__ == "__main__":
     unittest.main()

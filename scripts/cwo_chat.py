@@ -329,8 +329,31 @@ def render_start_post(result: dict, session: dict, workgraph_path: Path, applied
         lines.extend(["", "## REQUIRED NEXT ACTION FOR YOU (the assistant)", ""])
         lines.append("Call your ask_user tool NOW with exactly this shape (adjust option labels to the levers above; keep the 'mcp: ' prefix on EVERY label; do NOT print options as plain text):")
         lines.append("")
+
+        # Build question text with embedded decision data
+        goal = session.get("goal", "")
+        goal_truncated = (goal[:80] + "...") if len(goal) > 80 else goal
+        route_str = route.get("route") if isinstance(route, dict) else "unknown"
+        risk_level = route.get("risk_level") if isinstance(route, dict) else "unknown"
+        data_sensitivity = route.get("data_sensitivity") if isinstance(route, dict) else "unknown"
+
+        # Build defaults string
+        defaults_parts = []
+        for key, value in applied_flags.items():
+            if key != "parallelism":
+                defaults_parts.append(f"{key}={value}")
+        defaults_str = ", ".join(defaults_parts) if defaults_parts else "none"
+
+        question_text = (
+            f"Plan ready: {goal_truncated}\n"
+            f"Route: {route_str} | Risk: {risk_level} | Sensitivity: {data_sensitivity}\n"
+            f"Workgraph: {workgraph_path.resolve()}\n"
+            f"Defaults: {defaults_str}\n"
+            f"Apply adjustments, or proceed?"
+        )
+
         ask_user_json = {
-            "question": "Apply adjustments, or proceed with this plan?",
+            "question": question_text,
             "options": [
                 {"label": "mcp: accept defaults & proceed"},
                 {"label": "mcp: tight graph"},
@@ -340,7 +363,7 @@ def render_start_post(result: dict, session: dict, workgraph_path: Path, applied
         }
         lines.append(json.dumps(ask_user_json, indent=2))
         lines.append("")
-        lines.append("When the selection arrives: adjustments -> call cwo_answer with it; proceed -> call the cwo_continue tool NOW.")
+        lines.append("The question text above already contains the full context — do not shorten it. When the selection arrives: adjustments -> call cwo_answer with it; proceed -> call the cwo_continue tool NOW.")
 
     return "\n".join(lines)
 
@@ -429,8 +452,26 @@ def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str]
         lines.extend(["", "## REQUIRED NEXT ACTION FOR YOU (the assistant)", ""])
         lines.append("Call your ask_user tool NOW with exactly this shape (adjust option labels as needed; keep the 'mcp: ' prefix on EVERY label; do NOT print options as plain text):")
         lines.append("")
+
+        # Build question text with embedded decision data
+        changed_summary = "Changed: " + ", ".join(changed_levers) if changed_levers else "no changes"
+
+        # Build current lever settings
+        current_parts = []
+        for key, value in flags_info.items():
+            if key != "parallelism":
+                current_parts.append(f"{key}={value}")
+        current_str = ", ".join(current_parts) if current_parts else "none"
+
+        question_text = (
+            f"Updated: {changed_summary}\n"
+            f"Current: {current_str}\n"
+            f"Workgraph: {workgraph_path.resolve()}\n"
+            f"Further adjustments, or proceed?"
+        )
+
         ask_user_json = {
-            "question": "Apply further adjustments, or proceed with this plan?",
+            "question": question_text,
             "options": [
                 {"label": "mcp: accept current settings & proceed"},
                 {"label": "mcp: tight graph"},
@@ -440,7 +481,7 @@ def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str]
         }
         lines.append(json.dumps(ask_user_json, indent=2))
         lines.append("")
-        lines.append("When the selection arrives: further adjustments -> call cwo_answer with it; proceed -> call the cwo_continue tool NOW.")
+        lines.append("The question text above already contains the full context — do not shorten it. When the selection arrives: further adjustments -> call cwo_answer with it; proceed -> call the cwo_continue tool NOW.")
 
     return "\n".join(lines)
 
@@ -457,7 +498,7 @@ def render_answer_next(transport: str = "cli") -> str:
     ])
 
 
-def render_continue_post(continuation_brief: dict, transport: str = "cli") -> str:
+def render_continue_post(continuation_brief: dict, workgraph_path: Path | None = None, transport: str = "cli") -> str:
     """Render the POST block for the continue command."""
     lines = []
 
@@ -521,8 +562,47 @@ def render_continue_post(continuation_brief: dict, transport: str = "cli") -> st
         lines.extend(["", "## REQUIRED NEXT ACTION FOR YOU (the assistant)", ""])
         lines.append("Call your ask_user tool NOW with exactly this shape (adjust option labels as needed; keep the 'mcp: ' prefix on EVERY label; do NOT print options as plain text):")
         lines.append("")
+
+        # Build question text with embedded decision data
+        if recommended:
+            item_id = recommended.get('id', '')
+            title = recommended.get('title', '')
+            title_truncated = (title[:60] + "...") if len(title) > 60 else title
+            why_next = continuation_brief.get('why_next', '')
+            why_truncated = (why_next[:80] + "...") if len(why_next) > 80 else why_next
+            next_part = f"Next: {item_id} — {title_truncated} ({why_truncated})"
+        else:
+            next_part = "Next: no ready items"
+
+        # Build ready list
+        ready_ids = ", ".join([item.get('id', '') for item in continuation_brief.get("ready_issues", [])])
+        ready_part = f"Ready: {ready_ids}" if ready_ids else "Ready: none"
+
+        # Build blocked list
+        blocked_items = continuation_brief.get("blocked_issues", [])
+        if blocked_items:
+            blocked_parts = []
+            for item in blocked_items[:3]:  # Limit to first 3
+                item_id = item.get('id', '')
+                blockers = item.get("blockers", [])
+                first_reason = blockers[0] if blockers else "(no reason)"
+                first_reason_truncated = (first_reason[:60] + "...") if len(first_reason) > 60 else first_reason
+                blocked_parts.append(f"{item_id} ({first_reason_truncated})")
+            blocked_part = "Blocked: " + ", ".join(blocked_parts)
+        else:
+            blocked_part = "Blocked: none"
+
+        workgraph_str = str(workgraph_path.resolve()) if workgraph_path else "unknown"
+        question_text = (
+            f"{next_part}\n"
+            f"{ready_part}\n"
+            f"{blocked_part}\n"
+            f"Workgraph: {workgraph_str}\n"
+            f"What next?"
+        )
+
         ask_user_json = {
-            "question": "Work the recommended item, show blocked details, or adjust plan?",
+            "question": question_text,
             "options": [
                 {"label": "mcp: work the recommended item now"},
                 {"label": "mcp: show blocked details"},
@@ -531,7 +611,7 @@ def render_continue_post(continuation_brief: dict, transport: str = "cli") -> st
         }
         lines.append(json.dumps(ask_user_json, indent=2))
         lines.append("")
-        lines.append("When the selection arrives: work -> do the item's work, then call cwo_mark when done; show details -> relay blockers info; adjust -> call cwo_answer.")
+        lines.append("The question text above already contains the full context — do not shorten it. When the selection arrives: work -> do the item's work, then call cwo_mark when done; show details -> relay blockers info; adjust -> call cwo_answer.")
 
     return "\n".join(lines)
 
@@ -728,8 +808,27 @@ def run_mark(
         lines.extend([
             "## REQUIRED NEXT ACTION FOR YOU (the assistant)",
             "",
-            "Call the cwo_continue tool NOW to get the next recommended item.",
+            "Call your ask_user tool NOW with exactly this shape (keep the 'mcp: ' prefix on EVERY label; do NOT print options as plain text):",
+            "",
         ])
+
+        # Count open items for the question text
+        n_open = sum(1 for item in raw_items if item.get("Status", "").lower() in ["open", "in-progress"])
+
+        question_text = (
+            f"Marked {item_id} -> {status}. {n_open} item(s) open.\n"
+            f"Continue to next item?"
+        )
+
+        ask_user_json = {
+            "question": question_text,
+            "options": [
+                {"label": "mcp: continue to next item"}
+            ]
+        }
+        lines.append(json.dumps(ask_user_json, indent=2))
+        lines.append("")
+        lines.append("The question text above already contains the full context — do not shorten it. When the selection arrives: call the cwo_continue tool NOW to get the next recommended item.")
     else:
         lines.extend([
             NEXT_DELIMITER,
@@ -961,7 +1060,7 @@ def run_continue(workgraph_path: Path | None, workspace: Path, epic: str = "epic
     )
 
     # Step 4: Render output
-    post = render_continue_post(continuation_brief, transport)
+    post = render_continue_post(continuation_brief, workgraph_path, transport)
     next_cmd = render_continue_next(workgraph_path, transport)
 
     # For MCP, next_cmd is empty, so just return post

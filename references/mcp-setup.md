@@ -25,6 +25,8 @@ problem. Local models follow the protocol reliably.
    - **Args**: `["/full/path/to/cwo_mcp_server.py"]` (substitute the path from step 1)
    - **Environment** (optional): Add `CWO_WORKSPACE` = `/app/data` (or your state dir)
    - Click **Save** and **Reload** MCP servers.
+   
+   **Note (v1.5.1)**: The `ask_user` questions carry the full decision context (plan summary, item details, blockers, workgraph path) in the question text so weak agent models that truncate output still see the data alongside the clickable options.
 
 **Important (v1.4.1)**: CWO_WORKSPACE fully determines where all state (sessions, workgraphs) lives. Tool callers cannot override this via `workspace` arguments — the server uses only the environment variable or current working directory. This ensures centralized, server-controlled state management.
 
