@@ -36,15 +36,20 @@ class CwoChatTests(unittest.TestCase):
             self.assertIn("===== POST THIS MESSAGE TO THE USER =====", proc.stdout)
             self.assertIn("===== NEXT COMMAND (run after the user replies) =====", proc.stdout)
 
-            # Check for required content in POST block
-            self.assertIn("Reply with your choices", proc.stdout)
-            self.assertIn("(default)", proc.stdout)  # Mark for default option
+            # Check for required content in POST block (default-first)
+            self.assertIn("Applied Defaults", proc.stdout)
+            self.assertIn("Workgraph", proc.stdout)
+            self.assertIn("Adjustable Levers", proc.stdout)
 
             # Session file should exist
             cwo_dir = Path(tmpdir) / ".cwo"
             self.assertTrue(cwo_dir.exists())
             session_files = list(cwo_dir.glob("session-*.json"))
             self.assertEqual(len(session_files), 1)
+
+            # Workgraph file should exist (created during start)
+            workgraph_files = list(cwo_dir.glob("workgraph-*.md"))
+            self.assertEqual(len(workgraph_files), 1)
 
             # Session file should parse as JSON with required keys
             with open(session_files[0]) as f:
@@ -54,9 +59,10 @@ class CwoChatTests(unittest.TestCase):
             self.assertIn("slug", session)
             self.assertIn("questions", session)
             self.assertIn("flags", session)
+            self.assertIn("workgraph", session)  # Now created during start
 
-    def test_start_next_command_names_answer_and_session(self) -> None:
-        """Test that NEXT block contains answer subcommand and absolute session path."""
+    def test_start_next_command_plan_ready_message(self) -> None:
+        """Test that NEXT block shows plan is ready (no further action needed)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             proc = run_cwo_chat(
                 "start",
@@ -68,19 +74,15 @@ class CwoChatTests(unittest.TestCase):
             # Extract NEXT block
             next_block = proc.stdout.split("===== NEXT COMMAND (run after the user replies) =====")[1].strip()
 
-            # Should contain "answer" subcommand
-            self.assertIn("answer", next_block)
+            # Should contain message about plan being ready
+            self.assertIn("plan is ready", next_block)
+            self.assertIn("cwo_answer", next_block)  # Reference to adjusting via cwo_answer
+            self.assertIn("cwo_continue", next_block)  # Reference to continuing via cwo_continue
 
-            # Should contain absolute path to session
-            session_files = list((Path(tmpdir) / ".cwo").glob("session-*.json"))
-            self.assertEqual(len(session_files), 1)
-            session_path = str(session_files[0].resolve())
-            self.assertIn(session_path, next_block)
-
-    def test_answer_defaults_creates_workgraph(self) -> None:
-        """Test that answer with 'defaults' creates a workgraph file."""
+    def test_answer_updates_workgraph(self) -> None:
+        """Test that answer with 'defaults' re-scaffolds the workgraph."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            # First, run start
+            # First, run start (creates workgraph with defaults)
             proc = run_cwo_chat(
                 "start",
                 "implement the authentication system",
@@ -88,12 +90,16 @@ class CwoChatTests(unittest.TestCase):
             )
             self.assertEqual(proc.returncode, 0, proc.stderr)
 
-            # Get session path
+            # Get session path and initial workgraph
             session_files = list((Path(tmpdir) / ".cwo").glob("session-*.json"))
             self.assertEqual(len(session_files), 1)
             session_path = str(session_files[0].resolve())
 
-            # Now run answer with defaults
+            workgraph_files = list((Path(tmpdir) / ".cwo").glob("workgraph-*.md"))
+            self.assertEqual(len(workgraph_files), 1)
+            initial_content = workgraph_files[0].read_text()
+
+            # Now run answer with defaults (re-scaffolds with same defaults)
             proc = run_cwo_chat("answer", "defaults", "--session", session_path)
             self.assertEqual(proc.returncode, 0, proc.stderr)
 
@@ -101,14 +107,13 @@ class CwoChatTests(unittest.TestCase):
             self.assertIn("===== POST THIS MESSAGE TO THE USER =====", proc.stdout)
             self.assertIn("===== NEXT COMMAND (run after the user replies) =====", proc.stdout)
 
-            # Workgraph file should exist
+            # Workgraph file should still exist
             workgraph_files = list((Path(tmpdir) / ".cwo").glob("workgraph-*.md"))
             self.assertEqual(len(workgraph_files), 1)
 
             # Check content
             with open(workgraph_files[0]) as f:
                 content = f.read()
-            self.assertIn("Reduced durability fallback", content)
             self.assertIn("## Work Items", content)
 
             # POST block should contain absolute workgraph path

@@ -1,7 +1,7 @@
 ---
 name: complex-work-orchestration
 description: Govern complex multi-step work — coach the request, route it, scaffold a Markdown workgraph, execute with evidence, and resume across conversations.
-version: 1.3.0
+version: 1.4.0
 category: dev
 tags: [orchestration, planning, workgraph, governance]
 requires_toolsets: [bash]
@@ -39,12 +39,15 @@ this CWO skill` and STOP — do not offer alternative workflows.
    done
    python3 "$CWO_SKILL_ROOT/scripts/cwo_chat.py" start "<user goal>" --workspace "$PWD"
    ```
+   
+   The output contains two blocks: paste the text under `POST THIS MESSAGE
+   TO THE USER` to the user verbatim. The plan and workgraph are now ready.
 
-2. **Relay.** The output contains two blocks. Paste the text under
-   `POST THIS MESSAGE TO THE USER` to the user verbatim. When the user
-   replies, run the command printed under `NEXT COMMAND`, substituting the
-   user's reply where it says `<PASTE USER REPLY HERE>`. Repeat until the
-   NEXT COMMAND block says `(none ...)`.
+2. **Adjust (optional).** If the user wants to adjust orchestration options,
+   run the command printed under `NEXT COMMAND`, substituting the user's
+   reply where it says `<PASTE USER REPLY HERE>`. If there is no NEXT COMMAND
+   block (it says `(none ...)`), the plan cannot be adjusted further and is
+   ready to execute.
 
 3. **Resume.** When the user asks to continue/resume a sprint or workgraph,
    run step 1's find loop, then:

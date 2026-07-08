@@ -35,9 +35,10 @@ TOOLS: list[dict] = [
         "name": "cwo_start",
         "description": (
             "Start a Complex Work Orchestration session for a multi-step goal: "
-            "coaches the request, returns a summary plus numbered option "
-            "questions to relay to the user verbatim. Call this FIRST whenever "
-            "the user asks to plan, orchestrate, migrate, or break down "
+            "coaches the request, applies recommended defaults, scaffolds the "
+            "Markdown workgraph, and returns the complete plan in one call. "
+            "Returns the workgraph path and adjustable levers. Call this FIRST "
+            "whenever the user asks to plan, orchestrate, migrate, or break down "
             "multi-step engineering or research work."
         ),
         "inputSchema": {
@@ -52,10 +53,10 @@ TOOLS: list[dict] = [
     {
         "name": "cwo_answer",
         "description": (
-            "Continue the CWO session after the user answers the option "
-            "questions (or says 'defaults'). Maps the reply, scaffolds the "
-            "Markdown workgraph, returns the final packet with the workgraph "
-            "path. Call with the user's reply verbatim."
+            "Adjust CWO orchestration options (optional after cwo_start). "
+            "Maps the reply, re-scaffolds the Markdown workgraph with new "
+            "settings, and returns the updated workgraph path and changed "
+            "levers. Call with the user's adjustment reply verbatim."
         ),
         "inputSchema": {
             "type": "object",

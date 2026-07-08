@@ -56,24 +56,31 @@ class CwoMcpServerTests(unittest.TestCase):
         self.assertEqual(set(tools_by_name["cwo_continue"]["inputSchema"]["required"]), set())
 
     def test_handle_tool_start_answer_continue_round_trip(self) -> None:
-        """Test handle_tool start->answer->continue flow with transport="mcp" wording."""
+        """Test handle_tool start->answer->continue flow with default-first and MCP wording."""
         spec = importlib.util.spec_from_file_location("cwo_mcp_server", MCP_SERVER)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            # Start
+            # Start (now returns complete plan with workgraph)
             with mock.patch.dict(os.environ, {"CWO_WORKSPACE": tmpdir}):
                 result = mod.handle_tool("cwo_start", {"goal": "test goal"})
             self.assertNotIn("error", result)
             self.assertIn("POST THIS MESSAGE TO THE USER", result)
             self.assertIn("===== NEXT COMMAND (run after the user replies) =====", result)
+            # Check for default-first content
+            self.assertIn("Applied Defaults", result)
+            self.assertIn("Workgraph", result)
+            self.assertIn("Adjustable Levers", result)
             # Check for MCP transport wording (not CLI wording)
-            self.assertIn("call the cwo_answer tool", result)
+            self.assertIn("plan is ready", result)
             self.assertNotIn("python3", result)
-
-            # Answer with defaults
+            # Workgraph should be created
             cwo_dir = Path(tmpdir) / ".cwo"
+            workgraph_files = sorted(cwo_dir.glob("workgraph-*.md"), key=lambda p: p.stat().st_mtime)
+            self.assertGreater(len(workgraph_files), 0)
+
+            # Answer with adjustment
             session_files = sorted(cwo_dir.glob("session-*.json"), key=lambda p: p.stat().st_mtime)
             self.assertGreater(len(session_files), 0)
             session_path = str(session_files[-1])
@@ -81,10 +88,10 @@ class CwoMcpServerTests(unittest.TestCase):
             with mock.patch.dict(os.environ, {"CWO_WORKSPACE": tmpdir}):
                 result = mod.handle_tool(
                     "cwo_answer",
-                    {"reply": "defaults", "session": session_path}
+                    {"reply": "tight graph", "session": session_path}
                 )
             self.assertNotIn("error", result)
-            self.assertIn("Workgraph", result)
+            self.assertIn("Configuration Complete", result)
             # Check workgraph path is in result
             self.assertIn(".md", result)
             # Check for MCP transport wording

@@ -185,8 +185,88 @@ def map_reply(reply: str, questions: list) -> tuple[dict, list[str]]:
     return flags, used_defaults
 
 
-def render_start_post(result: dict, session: dict) -> str:
-    """Render the POST block for the start command."""
+def get_recommended_option(question: dict) -> dict | None:
+    """Extract the recommended option from a question."""
+    for option in question.get("options", []):
+        label = option.get("label", "")
+        if "(Recommended)" in label or "Default" in label:
+            return option
+    # Fallback: return first option
+    options = question.get("options", [])
+    return options[0] if options else None
+
+
+def extract_recommended_flags(questions: list, coach_result: dict | None = None) -> dict:
+    """Extract recommended flags from coaching questions and coach result.
+
+    Args:
+        questions: List of interactive questions from coach
+        coach_result: Full coach result to extract scaffold_sizing and other top-level values
+    """
+    flags = {}
+
+    # Extract scaffold_size from coach_result's scaffold_sizing
+    if coach_result:
+        scaffold_sizing = coach_result.get("scaffold_sizing", {})
+        if isinstance(scaffold_sizing, dict):
+            recommended_size = scaffold_sizing.get("recommended_size")
+            if recommended_size:
+                flags["scaffold_size"] = recommended_size
+
+        # Extract data_sensitivity from route if available
+        route = coach_result.get("route", {})
+        if isinstance(route, dict):
+            data_sensitivity = route.get("data_sensitivity")
+            if data_sensitivity:
+                flags["data_sensitivity"] = data_sensitivity
+
+        # Extract model_synthesis from coach result
+        model_synthesis = coach_result.get("model_synthesis")
+        if model_synthesis is not None:
+            flags["model_synthesis"] = model_synthesis if isinstance(model_synthesis, bool) else (str(model_synthesis).lower() in ["true", "yes", "on"])
+
+        # Extract beads_context_depth from coach result
+        beads_depth = coach_result.get("beads_context_depth")
+        if beads_depth:
+            flags["beads_context_depth"] = beads_depth
+
+    # Extract from interactive questions
+    for q in questions:
+        question_id = q.get("id", "")
+        recommended = get_recommended_option(q)
+        if not recommended:
+            continue
+
+        value = recommended.get("value")
+
+        # Use the structured value if available
+        if value:
+            if question_id == "workerbee_parallelism":
+                flags["parallelism"] = value
+            elif question_id == "beads_context_depth" and "beads_context_depth" not in flags:
+                flags["beads_context_depth"] = value
+            elif question_id == "model_synthesis" and "model_synthesis" not in flags:
+                flags["model_synthesis"] = value if isinstance(value, bool) else (str(value).lower() in ["true", "yes", "on"])
+            elif question_id == "data_sensitivity" and "data_sensitivity" not in flags:
+                flags["data_sensitivity"] = value
+
+    return flags
+
+
+def get_alternative_values(question_id: str) -> list[str]:
+    """Get the list of alternative values for a lever based on question_id."""
+    alternatives = {
+        "scaffold_size": ["full", "tight"],
+        "beads_context_depth": ["none", "summary", "focused", "heavy", "audit"],
+        "data_sensitivity": ["public", "redacted", "internal", "restricted"],
+        "model_synthesis": ["on", "off"],
+        "workerbee_parallelism": ["review", "heavy", "none"],
+    }
+    return alternatives.get(question_id, [])
+
+
+def render_start_post(result: dict, session: dict, workgraph_path: Path, applied_flags: dict) -> str:
+    """Render the POST block for the start command with applied defaults and workgraph."""
     lines = [
         POST_DELIMITER,
         "",
@@ -202,43 +282,50 @@ def render_start_post(result: dict, session: dict) -> str:
         lines.append(f"Risk level: {route.get('risk_level')}")
         lines.append(f"Data sensitivity: {route.get('data_sensitivity')}")
 
-    lines.extend(["", "## Your Choices", ""])
+    # Applied defaults
+    lines.extend(["", "## Applied Defaults", ""])
+    for key, value in applied_flags.items():
+        if key == "parallelism":
+            lines.append(f"- Parallelism: {value}")
+        else:
+            lines.append(f"- {key}: {value}")
 
-    # Add interactive questions
+    # Workgraph path
+    lines.extend(["", "## Workgraph", ""])
+    lines.append(f"{workgraph_path.resolve()}")
+
+    # Adjustable levers
+    lines.extend(["", "## Adjustable Levers", ""])
     questions = session.get("questions", [])
-    for i, q in enumerate(questions, 1):
-        lines.append(f"{i}. {q.get('question')}")
-        for option in q.get("options", []):
-            label = option.get("label", "")
-            is_default = "(Recommended)" in label or "Default" in label
-            marker = " (default)" if is_default else ""
-            lines.append(f"   - {label}{marker}")
+    for q in questions:
+        question_id = q.get("id", "")
+        label = q.get("question", "")
+        current = applied_flags.get(question_id if question_id != "workerbee_parallelism" else "parallelism")
+        alternatives = get_alternative_values(question_id)
 
-    lines.extend([
-        "",
-        "Reply with your choices, or say \"defaults\".",
-    ])
+        if alternatives:
+            alts_str = ", ".join(alternatives)
+            lines.append(f"- {label}: {current} (alternatives: {alts_str})")
 
     return "\n".join(lines)
 
 
-def render_start_next(session_path: Path, transport: str = "cli") -> str:
+def render_start_next(transport: str = "cli") -> str:
     """Render the NEXT block for the start command."""
     if transport == "mcp":
         return "\n".join([
             NEXT_DELIMITER,
             "",
-            "call the cwo_answer tool with the user's reply",
+            "(none — plan is ready. Adjust via cwo_answer, or resume later via cwo_continue.)",
         ])
-    abs_path = str(session_path.resolve())
     return "\n".join([
         NEXT_DELIMITER,
         "",
-        f'python3 "{Path(__file__).resolve()}" answer "<PASTE USER REPLY HERE>" --session "{abs_path}"',
+        "(none — plan is ready. Adjust via cwo_answer, or resume later via cwo_continue.)",
     ])
 
 
-def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str], workgraph_path: Path) -> str:
+def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str], workgraph_path: Path, changed_levers: list[str] | None = None) -> str:
     """Render the POST block for the answer command."""
     lines = [
         POST_DELIMITER,
@@ -247,16 +334,23 @@ def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str]
         "",
         f"Goal: {session.get('goal')}",
         "",
-        "## Chosen Options",
-        "",
     ]
+
+    # Show changed levers if any
+    if changed_levers:
+        lines.extend(["Changed:", ""])
+        for lever in changed_levers:
+            lines.append(f"- {lever}")
+        lines.append("")
+
+    lines.extend(["## Chosen Options", ""])
 
     # Show chosen flags
     for key, value in flags_info.items():
         if key == "parallelism":
             # Parallelism is shown but not stored in session flags
             lines.append(f"- Parallelism: {value}")
-        elif key in ["scaffold_size", "data_sensitivity", "beads_context_depth"]:
+        elif key in ["scaffold_size", "data_sensitivity", "beads_context_depth", "model_synthesis"]:
             default_marker = " (non-default)" if key not in used_defaults else ""
             lines.append(f"- {key}: {value}{default_marker}")
 
@@ -368,6 +462,7 @@ def render_continue_next(workgraph_path: Path, transport: str = "cli") -> str:
 def run_start(goal: str, workspace: Path, transport: str = "cli") -> str:
     """Start a new CWO session and return rendered output.
 
+    Applies recommended defaults, scaffolds workgraph immediately.
     Raises CwoChatError if doctor check fails or other issues occur.
     """
     workspace = Path(workspace).resolve()
@@ -407,18 +502,50 @@ def run_start(goal: str, workspace: Path, transport: str = "cli") -> str:
     slug = slug_from_text(goal)
     session_path = cwo_dir / f"session-{slug}.json"
 
+    # Step 4: Extract and apply recommended defaults
+    questions = result.get("interactive_questions", [])
+    applied_flags = extract_recommended_flags(questions, result)
+
+    # Step 5: Scaffold workgraph with applied defaults
+    scaffold_size = applied_flags.get("scaffold_size", "full")
+    classify_kwargs = {
+        "external_ok": False,
+        "allow_disclosure_escalation": False,
+        "local_ok": False,
+        "prefer_local": False,
+        "local_profile": None,
+        "share_boundary": "no-outside-sharing",
+        "data_sensitivity": applied_flags.get("data_sensitivity"),
+        "requested_roles": [],
+        "execution_environment": None,
+        "model_synthesis": applied_flags.get("model_synthesis", False),
+        "beads_context_depth": applied_flags.get("beads_context_depth"),
+    }
+    route = classify_work(goal, **classify_kwargs)
+    plan = planned_graph(goal, route, scaffold_size=scaffold_size)
+    workgraph_markdown = markdown_workgraph_plan(goal, plan)
+
+    # Step 6: Write workgraph file
+    workgraph_path = cwo_dir / f"workgraph-{slug}.md"
+    with open(workgraph_path, "w") as f:
+        f.write(workgraph_markdown)
+
+    # Step 7: Save session with applied flags and workgraph path
     session = {
         "version": 1,
         "goal": goal,
         "slug": slug,
-        "questions": result.get("interactive_questions", []),
-        "flags": {},
+        "questions": questions,
+        "flags": {k: v for k, v in applied_flags.items() if k != "parallelism"},
+        "workgraph": str(workgraph_path.resolve()),
     }
+    if "parallelism" in applied_flags:
+        session["parallelism"] = applied_flags["parallelism"]
     save_session(session_path, session)
 
-    # Step 4: Render output
-    post = render_start_post(result, session)
-    next_cmd = render_start_next(session_path, transport)
+    # Step 8: Render output
+    post = render_start_post(result, session, workgraph_path, applied_flags)
+    next_cmd = render_start_next(transport)
 
     return f"{post}\n\n{next_cmd}"
 
@@ -447,7 +574,16 @@ def run_answer(reply: str, session_path: Path | None, workspace: Path, transport
     if session_path.parent.parent != workspace:
         workspace = session_path.parent.parent  # .cwo is parent of session file
 
-    # Step 5: Re-run classify_work and scaffold
+    # Step 5: Compute changed levers (compare new flags with stored flags)
+    previous_flags = session.get("flags", {})
+    changed_levers = []
+    for key, new_value in flags.items():
+        if key != "parallelism":
+            old_value = previous_flags.get(key)
+            if old_value != new_value:
+                changed_levers.append(f"{key}: {old_value} → {new_value}")
+
+    # Step 6: Re-run classify_work and scaffold
     goal = session.get("goal")
     scaffold_size = flags.get("scaffold_size", "full")
     classify_kwargs = {
@@ -467,13 +603,13 @@ def run_answer(reply: str, session_path: Path | None, workspace: Path, transport
     plan = planned_graph(goal, route, scaffold_size=scaffold_size)
     workgraph_markdown = markdown_workgraph_plan(goal, plan)
 
-    # Step 6: Write workgraph file
+    # Step 7: Write workgraph file
     slug = session.get("slug")
     workgraph_path = workspace / ".cwo" / f"workgraph-{slug}.md"
     with open(workgraph_path, "w") as f:
         f.write(workgraph_markdown)
 
-    # Step 7: Update session JSON
+    # Step 8: Update session JSON
     session["flags"] = {
         k: v for k, v in flags.items() if k != "parallelism"
     }
@@ -482,8 +618,8 @@ def run_answer(reply: str, session_path: Path | None, workspace: Path, transport
         session["parallelism"] = flags["parallelism"]
     save_session(session_path, session)
 
-    # Step 8: Render output
-    post = render_answer_post(session, flags, used_defaults, workgraph_path)
+    # Step 9: Render output
+    post = render_answer_post(session, flags, used_defaults, workgraph_path, changed_levers if changed_levers else None)
     next_cmd = render_answer_next(transport)
 
     return f"{post}\n\n{next_cmd}"
