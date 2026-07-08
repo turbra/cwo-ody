@@ -26,6 +26,8 @@ problem. Local models follow the protocol reliably.
    - **Environment** (optional): Add `CWO_WORKSPACE` = `/app/data` (or your state dir)
    - Click **Save** and **Reload** MCP servers.
 
+**Important (v1.4.1)**: CWO_WORKSPACE fully determines where all state (sessions, workgraphs) lives. Tool callers cannot override this via `workspace` arguments — the server uses only the environment variable or current working directory. This ensures centralized, server-controlled state management.
+
 4. **Verify**:
    - The MCP servers list should show "cwo" as active.
    - In a new chat, ask the model to plan a task: "plan a two-service refactor"

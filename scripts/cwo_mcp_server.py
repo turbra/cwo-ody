@@ -45,7 +45,6 @@ TOOLS: list[dict] = [
             "type": "object",
             "properties": {
                 "goal": {"type": "string", "description": "The user's goal, verbatim."},
-                "workspace": {"type": "string", "description": "Optional state directory; defaults to the server's CWO_WORKSPACE."},
             },
             "required": ["goal"],
         },
@@ -63,7 +62,6 @@ TOOLS: list[dict] = [
             "properties": {
                 "reply": {"type": "string", "description": "The user's reply, verbatim."},
                 "session": {"type": "string", "description": "Optional session file path; defaults to the newest session."},
-                "workspace": {"type": "string", "description": "Optional state directory."},
             },
             "required": ["reply"],
         },
@@ -73,13 +71,13 @@ TOOLS: list[dict] = [
         "description": (
             "Resume a CWO sprint: reads the Markdown workgraph and returns the "
             "recommended next work item with blockers. Call when the user asks "
-            "to continue or resume a sprint/workgraph."
+            "to continue or resume a sprint/workgraph. Usually omit the workgraph "
+            "parameter — the newest workgraph is found automatically."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "workgraph": {"type": "string", "description": "Optional workgraph path; defaults to the newest workgraph."},
-                "workspace": {"type": "string", "description": "Optional state directory."},
             },
             "required": [],
         },
@@ -87,29 +85,29 @@ TOOLS: list[dict] = [
 ]
 
 
-def _ws(arguments: dict) -> Path:
-    raw = str(arguments.get("workspace") or "").strip()
-    return Path(raw) if raw else default_workspace()
-
-
 def handle_tool(name: str, arguments: dict) -> str:
-    """Dispatch one tool call; returns the text result (never raises)."""
+    """Dispatch one tool call; returns the text result (never raises).
+
+    Workspace is always determined by default_workspace() (CWO_WORKSPACE env
+    or cwd); any workspace key in arguments is ignored.
+    """
     try:
+        ws = default_workspace()
         if name == "cwo_start":
-            return run_start(str(arguments["goal"]), _ws(arguments), transport="mcp")
+            return run_start(str(arguments["goal"]), ws, transport="mcp")
         if name == "cwo_answer":
             session = str(arguments.get("session") or "").strip()
             return run_answer(
                 str(arguments["reply"]),
                 Path(session) if session else None,
-                _ws(arguments),
+                ws,
                 transport="mcp",
             )
         if name == "cwo_continue":
             workgraph = str(arguments.get("workgraph") or "").strip()
             return run_continue(
                 Path(workgraph) if workgraph else None,
-                _ws(arguments),
+                ws,
                 transport="mcp",
             )
         return f"error: unknown tool {name!r}"

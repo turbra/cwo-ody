@@ -265,7 +265,7 @@ def get_alternative_values(question_id: str) -> list[str]:
     return alternatives.get(question_id, [])
 
 
-def render_start_post(result: dict, session: dict, workgraph_path: Path, applied_flags: dict) -> str:
+def render_start_post(result: dict, session: dict, workgraph_path: Path, applied_flags: dict, transport: str = "cli") -> str:
     """Render the POST block for the start command with applied defaults and workgraph."""
     lines = [
         POST_DELIMITER,
@@ -306,6 +306,11 @@ def render_start_post(result: dict, session: dict, workgraph_path: Path, applied
         if alternatives:
             alts_str = ", ".join(alternatives)
             lines.append(f"- {label}: {current} (alternatives: {alts_str})")
+
+    # Add work-item execution guidance for mcp transport
+    if transport == "mcp":
+        lines.extend(["", "## Work Item Execution", ""])
+        lines.append("Work items are executed by YOU (the agent): do the item's work, then edit its Status line in the workgraph file, then call cwo_continue for the next item.")
 
     return "\n".join(lines)
 
@@ -397,7 +402,7 @@ def render_answer_next(transport: str = "cli") -> str:
     ])
 
 
-def render_continue_post(continuation_brief: dict) -> str:
+def render_continue_post(continuation_brief: dict, transport: str = "cli") -> str:
     """Render the POST block for the continue command."""
     lines = [
         POST_DELIMITER,
@@ -439,6 +444,11 @@ def render_continue_post(continuation_brief: dict) -> str:
         lines.extend(["", "## Warnings", ""])
         for warning in warnings:
             lines.append(f"- {warning}")
+
+    # Add work-item execution guidance for mcp transport
+    if transport == "mcp":
+        lines.extend(["", "## Work Item Execution", ""])
+        lines.append("Work items are executed by YOU (the agent): do the item's work, then edit its Status line in the workgraph file, then call cwo_continue for the next item.")
 
     return "\n".join(lines)
 
@@ -544,7 +554,7 @@ def run_start(goal: str, workspace: Path, transport: str = "cli") -> str:
     save_session(session_path, session)
 
     # Step 8: Render output
-    post = render_start_post(result, session, workgraph_path, applied_flags)
+    post = render_start_post(result, session, workgraph_path, applied_flags, transport)
     next_cmd = render_start_next(transport)
 
     return f"{post}\n\n{next_cmd}"
@@ -650,7 +660,7 @@ def run_continue(workgraph_path: Path | None, workspace: Path, epic: str = "epic
     )
 
     # Step 4: Render output
-    post = render_continue_post(continuation_brief)
+    post = render_continue_post(continuation_brief, transport)
     next_cmd = render_continue_next(workgraph_path, transport)
 
     return f"{post}\n\n{next_cmd}"

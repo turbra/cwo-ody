@@ -48,6 +48,8 @@ class CwoMcpServerTests(unittest.TestCase):
             self.assertIn("type", schema)
             self.assertIn("properties", schema)
             self.assertIn("required", schema)
+            # Verify no workspace property in any tool (v1.4.1: server-controlled only)
+            self.assertNotIn("workspace", schema.get("properties", {}), f"Tool {tool['name']} should not have 'workspace' property")
 
         # Check required lists
         tools_by_name = {t["name"]: t for t in mod.TOOLS}
@@ -107,6 +109,44 @@ class CwoMcpServerTests(unittest.TestCase):
                 result = mod.handle_tool("cwo_continue", {"workgraph": workgraph_path})
             self.assertNotIn("error", result)
             self.assertIn("Recommended", result)
+
+    def test_handle_tool_ignores_workspace_argument(self) -> None:
+        """Test that handle_tool ignores workspace argument and uses CWO_WORKSPACE env."""
+        spec = importlib.util.spec_from_file_location("cwo_mcp_server", MCP_SERVER)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        with tempfile.TemporaryDirectory() as tmpdir_a:
+            with tempfile.TemporaryDirectory() as tmpdir_b:
+                # Patch CWO_WORKSPACE to tmpdir_a
+                with mock.patch.dict(os.environ, {"CWO_WORKSPACE": tmpdir_a}):
+                    # Call handle_tool with workspace argument pointing to tmpdir_b
+                    # (which should be ignored)
+                    result = mod.handle_tool(
+                        "cwo_start",
+                        {"goal": "test goal", "workspace": tmpdir_b}
+                    )
+                # Workspace argument should be ignored
+                self.assertNotIn("error", result)
+                self.assertIn("POST THIS MESSAGE TO THE USER", result)
+
+                # Verify session/workgraph files are created under tmpdir_a, not tmpdir_b
+                cwo_dir_a = Path(tmpdir_a) / ".cwo"
+                cwo_dir_b = Path(tmpdir_b) / ".cwo"
+
+                # tmpdir_a should have files
+                self.assertTrue(cwo_dir_a.exists(), f"CWO dir should exist under tmpdir_a: {tmpdir_a}")
+                workgraph_files_a = list(cwo_dir_a.glob("workgraph-*.md"))
+                self.assertGreater(
+                    len(workgraph_files_a), 0,
+                    "Workgraph should be created under CWO_WORKSPACE (tmpdir_a)"
+                )
+
+                # tmpdir_b should NOT have files
+                self.assertFalse(
+                    cwo_dir_b.exists(),
+                    f"CWO dir should NOT exist under tmpdir_b (workspace argument was ignored): {tmpdir_b}"
+                )
 
     def test_handle_tool_errors_are_text_not_raises(self) -> None:
         """Test error handling returns text, never raises."""
