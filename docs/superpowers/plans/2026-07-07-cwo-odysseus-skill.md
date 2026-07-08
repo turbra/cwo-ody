@@ -1179,3 +1179,31 @@ handler round-trips without mcp; skipIf-guarded SDK smoke when mcp present.
 references/mcp-setup.md (registration walkthrough) + README section; doctor
 REQUIRED_FILES += cwo_mcp_server.py; version 1.3.0 lockstep; manifest; push;
 CI. Live registration + unprompted acceptance retest remains user-side.
+
+---
+
+## Milestone 4 — v1.4.0 default-first (approved)
+
+Rationale: Odysseus re-gates every user turn (low_signal requires domain
+keywords), so multi-turn flows break on natural replies. Make each
+interaction single-turn complete: cwo_start scaffolds immediately with the
+coach's recommended defaults and returns packet + workgraph path in one call;
+the questions become an "adjustable levers" section; cwo_answer remains as
+the optional adjuster (re-scaffolds from the session with mapped flags).
+
+### Task 19: default-first run_start + docs + v1.4.0
+- run_start: after coaching, immediately apply recommended defaults, scaffold
+  markdown workgraph to <workspace>/.cwo/workgraph-<slug>.md, save session
+  (defaults recorded), and return ONE rendered block: summary, applied
+  defaults, workgraph ABSOLUTE path, "Adjustable levers" list (each lever:
+  current value + accepted alternatives), and how to adjust (transport-aware:
+  call cwo_answer / run the answer command with e.g. "tight graph").
+- run_answer: unchanged mapping, re-scaffolds and OVERWRITES the session's
+  workgraph, notes what changed vs. previous.
+- CLI + MCP text both updated; MCP tool descriptions updated (cwo_start "in
+  one call returns the plan and workgraph"; cwo_answer "optional adjustments").
+- SKILL.md: procedure updated (start does it all; adjustments optional;
+  resume unchanged); README + references/chat-protocol.md + mcp-setup.md
+  aligned; version lockstep 1.4.0.
+- Tests updated: start creates workgraph; answer adjusts (workgraph content
+  changes to tight chain); discovery/resume tests keep passing.
