@@ -222,8 +222,14 @@ def render_start_post(result: dict, session: dict) -> str:
     return "\n".join(lines)
 
 
-def render_start_next(session_path: Path) -> str:
+def render_start_next(session_path: Path, transport: str = "cli") -> str:
     """Render the NEXT block for the start command."""
+    if transport == "mcp":
+        return "\n".join([
+            NEXT_DELIMITER,
+            "",
+            "call the cwo_answer tool with the user's reply",
+        ])
     abs_path = str(session_path.resolve())
     return "\n".join([
         NEXT_DELIMITER,
@@ -282,8 +288,14 @@ def render_answer_post(session: dict, flags_info: dict, used_defaults: list[str]
     return "\n".join(lines)
 
 
-def render_answer_next() -> str:
+def render_answer_next(transport: str = "cli") -> str:
     """Render the NEXT block for the answer command."""
+    if transport == "mcp":
+        return "\n".join([
+            NEXT_DELIMITER,
+            "",
+            "(none — session complete. To resume later call the cwo_continue tool.)",
+        ])
     return "\n".join([
         NEXT_DELIMITER,
         "",
@@ -337,8 +349,14 @@ def render_continue_post(continuation_brief: dict) -> str:
     return "\n".join(lines)
 
 
-def render_continue_next(workgraph_path: Path) -> str:
+def render_continue_next(workgraph_path: Path, transport: str = "cli") -> str:
     """Render the NEXT block for the continue command."""
+    if transport == "mcp":
+        return "\n".join([
+            NEXT_DELIMITER,
+            "",
+            "(none — work the recommended item, update its Status in workgraph, then call cwo_continue again)",
+        ])
     abs_path = str(workgraph_path.resolve())
     return "\n".join([
         NEXT_DELIMITER,
@@ -347,7 +365,7 @@ def render_continue_next(workgraph_path: Path) -> str:
     ])
 
 
-def run_start(goal: str, workspace: Path) -> str:
+def run_start(goal: str, workspace: Path, transport: str = "cli") -> str:
     """Start a new CWO session and return rendered output.
 
     Raises CwoChatError if doctor check fails or other issues occur.
@@ -400,12 +418,12 @@ def run_start(goal: str, workspace: Path) -> str:
 
     # Step 4: Render output
     post = render_start_post(result, session)
-    next_cmd = render_start_next(session_path)
+    next_cmd = render_start_next(session_path, transport)
 
     return f"{post}\n\n{next_cmd}"
 
 
-def run_answer(reply: str, session_path: Path | None, workspace: Path) -> str:
+def run_answer(reply: str, session_path: Path | None, workspace: Path, transport: str = "cli") -> str:
     """Answer coaching questions and return rendered output.
 
     If session_path is None, discover the newest session file in workspace.
@@ -466,12 +484,12 @@ def run_answer(reply: str, session_path: Path | None, workspace: Path) -> str:
 
     # Step 8: Render output
     post = render_answer_post(session, flags, used_defaults, workgraph_path)
-    next_cmd = render_answer_next()
+    next_cmd = render_answer_next(transport)
 
     return f"{post}\n\n{next_cmd}"
 
 
-def run_continue(workgraph_path: Path | None, workspace: Path, epic: str = "epic") -> str:
+def run_continue(workgraph_path: Path | None, workspace: Path, epic: str = "epic", transport: str = "cli") -> str:
     """Continue a sprint and return rendered output.
 
     If workgraph_path is None, discover the newest workgraph file in workspace.
@@ -497,7 +515,7 @@ def run_continue(workgraph_path: Path | None, workspace: Path, epic: str = "epic
 
     # Step 4: Render output
     post = render_continue_post(continuation_brief)
-    next_cmd = render_continue_next(workgraph_path)
+    next_cmd = render_continue_next(workgraph_path, transport)
 
     return f"{post}\n\n{next_cmd}"
 

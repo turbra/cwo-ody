@@ -46,6 +46,7 @@ class CwoDoctorTests(unittest.TestCase):
         for rel in [
             "scripts/coach_prompt.py",
             "scripts/cwo_chat.py",
+            "scripts/cwo_mcp_server.py",
             "scripts/route_work.py",
             "scripts/scaffold_workgraph.py",
             "scripts/summarize_resume_state.py",
@@ -54,6 +55,7 @@ class CwoDoctorTests(unittest.TestCase):
             "scripts/cwo_core/workgraph_markdown.py",
             "policy/routing-policy.yaml",
             "references/chat-protocol.md",
+            "references/mcp-setup.md",
             "references/workgraph-lifecycle.md",
         ]:
             self.assertIn(rel, required)

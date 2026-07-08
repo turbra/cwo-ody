@@ -1,7 +1,7 @@
 ---
 name: complex-work-orchestration
 description: Govern complex multi-step work — coach the request, route it, scaffold a Markdown workgraph, execute with evidence, and resume across conversations.
-version: 1.2.0
+version: 1.3.0
 category: dev
 tags: [orchestration, planning, workgraph, governance]
 requires_toolsets: [bash]

@@ -16,6 +16,7 @@ policy/synthesis-policy.yaml
 policy/zero-trust-consensus-policy.yaml
 README.md
 references/chat-protocol.md
+references/mcp-setup.md
 references/upstream-pin.md
 references/workgraph-lifecycle.md
 scripts/coach_prompt.py
@@ -32,6 +33,7 @@ scripts/cwo_core/util.py
 scripts/cwo_core/waivers.py
 scripts/cwo_core/workgraph_markdown.py
 scripts/cwo_doctor.py
+scripts/cwo_mcp_server.py
 scripts/route_work.py
 scripts/scaffold_workgraph.py
 scripts/summarize_resume_state.py
@@ -41,6 +43,7 @@ tests/test_bundle_budget.py
 tests/test_continue_sprint.py
 tests/test_cwo_chat.py
 tests/test_cwo_doctor.py
+tests/test_cwo_mcp_server.py
 tests/test_no_beads_import.py
 tests/test_prompt_coach.py
 tests/test_route_work.py

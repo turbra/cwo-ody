@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 DOCTOR_RESULT_TYPE = "cwo-odysseus-doctor"
-SKILL_VERSION = "1.2.0"
+SKILL_VERSION = "1.3.0"
 
 # Extended by later milestones; keep sorted. SKILL.md is listed because a
 # truncated import (Odysseus drops files silently at its caps) is the main
@@ -25,6 +25,7 @@ REQUIRED_FILES = [
     "bundle-manifest.txt",
     "policy/routing-policy.yaml",
     "references/chat-protocol.md",
+    "references/mcp-setup.md",
     "references/workgraph-lifecycle.md",
     "scripts/coach_prompt.py",
     "scripts/cwo_chat.py",
@@ -40,6 +41,7 @@ REQUIRED_FILES = [
     "scripts/cwo_core/waivers.py",
     "scripts/cwo_core/workgraph_markdown.py",
     "scripts/cwo_doctor.py",
+    "scripts/cwo_mcp_server.py",
     "scripts/route_work.py",
     "scripts/scaffold_workgraph.py",
     "scripts/summarize_resume_state.py",
