@@ -1,7 +1,7 @@
 ---
 name: complex-work-orchestration
 description: Govern complex multi-step work — coach the request, route it, scaffold a Markdown workgraph, execute with evidence, and resume across conversations.
-version: 1.4.3
+version: 1.4.4
 category: dev
 tags: [orchestration, planning, workgraph, governance]
 requires_toolsets: [bash]
@@ -19,6 +19,11 @@ that. Only skip this skill for trivial single-step asks (one-file edits,
 quick questions).
 
 ## Procedure
+
+**If cwo MCP tools are available (cwo_start / cwo_answer / cwo_continue),
+use THEM for everything below and ignore the bash commands in this
+procedure — never mix the two lanes; the MCP server owns the state
+directory.** Otherwise:
 
 Your ONLY job is to run one command per turn with your bash or shell tool
 and paste its output blocks to the user. Never plan, summarize, or answer
