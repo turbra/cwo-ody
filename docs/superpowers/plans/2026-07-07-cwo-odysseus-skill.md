@@ -1150,3 +1150,32 @@ cwo_chat start); doctor REQUIRED_FILES += scripts/cwo_chat.py; SKILL_VERSION
 and frontmatter → 1.2.0 (lockstep test exists); README weak-model section;
 manifest update; push; CI green. Live acceptance retest follows as Task 13
 (retry) with qwen3-30b.
+
+---
+
+## Milestone 3 — v1.3.0 MCP adapter (approved after #2959/#4008 analysis)
+
+Rationale: Odysseus delivers skill text as untrusted context (#2959), so local
+models ignore it; MCP tool schemas enter the trusted function list. Expose the
+relay verbs as MCP tools. The `mcp` SDK exists in the Odysseus pod (bundled
+servers use it) but NOT in dev/CI — the server module must import it lazily so
+the test suite stays dependency-free.
+
+### Task 17: Refactor cwo_chat.py into importable functions
+run_start(goal, workspace) -> str, run_answer(reply, session_path|None,
+workspace) -> str, run_continue(workgraph_path|None, workspace) -> str; CLI
+subcommands become thin printers of these. Add newest-file default discovery
+(session-*.json / workgraph-*.md under <workspace>/.cwo) used when the path
+arg is None. All existing tests stay green; add unit tests for the discovery
+defaults and for direct function calls (no subprocess).
+
+### Task 18: scripts/cwo_mcp_server.py + docs + v1.3.0
+TOOLS schema (plain dicts: cwo_start/cwo_answer/cwo_continue) + HANDLERS
+mapping importable without the mcp package; guarded `import mcp` with a clean
+main()-time error when absent; stdio server wiring mirrors Odysseus's bundled
+mcp_servers/*.py pattern; CWO_WORKSPACE env default. Tool-result text says
+"call cwo_answer with the user's reply" instead of NEXT COMMAND. Tests:
+handler round-trips without mcp; skipIf-guarded SDK smoke when mcp present.
+references/mcp-setup.md (registration walkthrough) + README section; doctor
+REQUIRED_FILES += cwo_mcp_server.py; version 1.3.0 lockstep; manifest; push;
+CI. Live registration + unprompted acceptance retest remains user-side.
