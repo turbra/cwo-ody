@@ -53,12 +53,12 @@ should track the workgraph path from the prior cwo_answer call and pass it
 
 ## Expected Flow
 
-1. User: "Plan a large refactor."
+1. User: "Plan a large refactor." (on gated hosts, say "plan (mcp)" to trigger MCP)
 2. Model calls `cwo_start` with the user's goal.
-3. Model relays the coaching questions to the user.
-4. User answers (e.g., "tight graph, internal data").
-5. Model calls `cwo_answer` with the reply.
-6. Model relays the workgraph and items to the user.
+3. Model relays the complete plan + workgraph file path to the user (done in one turn with defaults applied).
+4. **Optional:** User: "Use a tight graph instead." or other adjustment request.
+5. **Optional:** Model calls `cwo_answer` with the mapped adjustment flags.
+6. **Optional:** Model relays the updated plan to the user.
 7. User: "Start on item A1."
 8. User: "Continue the sprint." (later, in same or fresh chat)
 9. Model calls `cwo_continue` (auto-discovers workgraph from workspace).
@@ -92,4 +92,4 @@ python3 /app/data/skills/imported/complex-work-orchestration/scripts/cwo_mcp_ser
 
 If you cannot register MCP in your Odysseus instance, the skill remains
 usable via SKILL.md text relay: agents run `cwo_chat.py` directly and paste
-output blocks (v1.2.0 behavior). The MCP adapter is optional.
+output blocks (v1.4.0 behavior). The MCP adapter is optional.

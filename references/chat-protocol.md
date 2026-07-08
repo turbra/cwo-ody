@@ -1,8 +1,10 @@
 # Chat protocol: surfacing CWO options in Odysseus
 
-> **v1.2.0:** `scripts/cwo_chat.py` implements this protocol in code — the
-> agent runs one command per turn and relays output. This document remains
-> the human-readable specification of the mapping the script applies.
+> **v1.4.0:** `scripts/cwo_chat.py` implements this protocol in code — the
+> agent calls `cwo_start` once and receives the complete plan, workgraph path,
+> and recommended defaults in a single turn. Optional adjustments are then made
+> via `cwo_answer`. This document remains the human-readable specification of
+> the mapping the script applies.
 
 ## Trust boundary (read first)
 
@@ -11,33 +13,37 @@ prevent an agent or operator from bypassing them; the gates are honest
 about being advisory. Never present a CWO risk/sensitivity result as a
 hard guarantee.
 
-## The Q&A loop
+## The default-first flow
 
-1. Run: `python3 "$CWO_SKILL_ROOT/scripts/coach_prompt.py" --json "<user goal text>"`
-2. Parse JSON. Post ONE chat message containing:
+1. Run: `python3 "$CWO_SKILL_ROOT/scripts/cwo_chat.py start "<user goal text>"`
+   (or via MCP: call `cwo_start` with the user's goal text)
+2. Parse JSON response. The output includes:
    - summary line: recommended orchestration level, route class, risk,
      data sensitivity (fields: `recommended_orchestration_level`,
      `route.route`, `route.risk_level`, `route.data_sensitivity`)
-   - each entry of `interactive_questions` as a numbered question with its
-     options; mark the option whose label contains "(Recommended)" as the
-     default
-   - one line: "Reply with choices or 'defaults'."
-3. Map answers using the table below. Anything not in the table → use the
-   default and tell the user you did.
-4. Re-run the coach with the mapped flags appended; show the user the
-   summary + `paste_ready_prompt`; on confirmation, scaffold (see
-   workgraph-lifecycle.md).
+   - the complete plan and workgraph file path (ready to use)
+   - an "Adjustable levers" section describing optional parameters and their
+     current defaults (drawn from `enabled_levers`)
+3. Post the summary and workgraph path to the user. The defaults are already
+   applied and optimal for the detected scenario.
+4. **Optional:** If the user requests adjustments (e.g., "use tight graph"
+   or "activate synthesis"), map their request using the adjustment vocabulary
+   table below and call `cwo_answer` with the mapped flags. Re-run to apply
+   the new settings and relay the updated summary (see workgraph-lifecycle.md).
 
-## Answer-to-flag table
+## Adjustment vocabulary
 
-| question id | asked as | default | accepted answers → flag/value |
+This table applies **only** when the user requests adjustments to the defaults.
+It maps their natural-language request to the CLI flags used in `cwo_answer`.
+
+| lever id | natural-language request | default | accepted answers → flag/value |
 |---|---|---|---|
-| `workerbee_parallelism` | "Parallelize with subagents?" | coach's recommended option (label contains "(Recommended)") | "review"/"default" → record `review-subagents`; "heavy" → `heavy-review-subagents`; "no"/"none"/"main thread" → `no-subagents`. No CLI flag — record the value in the final packet message; it directs how YOU execute (whether you fan out work). |
-| `beads_context_depth` | "How much prior context should workers read?" | coach's `beads_context_depth` value | "none"/"summary"/"focused"/"heavy"/"audit" → `--beads-context-depth <value>` |
-| `model_synthesis` (appears in `enabled_levers`/questions when relevant) | "Activate the model-synthesis lane?" | off | "yes"/"synthesis" → `--model-synthesis`; "no" → omit |
-| `scaffold_size` | "Full graph or tight chain?" | `full` | "full" → `--scaffold-size full`; "tight"/"small" → `--scaffold-size tight` |
-| data sensitivity (always confirm when route JSON shows `data_sensitivity` above `public` with `data_sensitivity_source: heuristic`) | "This looks <level>. Confirm sensitivity?" | heuristic value | "public"/"redacted"/"internal"/"restricted" → `--data-sensitivity <value>`. Declarations can RAISE the effective level, never lower it (script-enforced). |
-| external contracting | not asked in v1 | off | never pass `--external-ok` in v1; if the user asks for external contractor dispatch, say it is out of scope of this skill version |
+| `workerbee_parallelism` | "parallelize with subagents?" or "use main thread?" | coach's recommended option | "review"/"default" → record `review-subagents`; "heavy" → `heavy-review-subagents`; "no"/"none"/"main thread" → `no-subagents`. No CLI flag — record the value in the final packet message; it directs how YOU execute (whether you fan out work). |
+| `beads_context_depth` | "how much prior context?" or "read full history?" | coach's `beads_context_depth` value | "none"/"summary"/"focused"/"heavy"/"audit" → `--beads-context-depth <value>` |
+| `model_synthesis` (appears in `enabled_levers` when relevant) | "activate synthesis lane?" | off | "yes"/"synthesis" → `--model-synthesis`; "no" → omit |
+| `scaffold_size` | "tight or full graph?" | `full` | "full" → `--scaffold-size full`; "tight"/"small" → `--scaffold-size tight` |
+| data sensitivity (always confirm when route JSON shows `data_sensitivity` above `public` with `data_sensitivity_source: heuristic`) | "confirm sensitivity?" | heuristic value | "public"/"redacted"/"internal"/"restricted" → `--data-sensitivity <value>`. Declarations can RAISE the effective level, never lower it (script-enforced). |
+| external contracting | not offered in v1.4.0 | off | never pass `--external-ok` in v1.4.0; if the user asks for external contractor dispatch, say it is out of scope of this skill version |
 
 ## Sensitivity conduct
 
